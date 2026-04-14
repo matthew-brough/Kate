@@ -1,0 +1,41 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: kate
+
+servers: 1
+agents: 2
+
+image: rancher/k3s:v1.31.4-k3s1
+
+ports:
+  - port: 80:80
+    nodeFilters:
+      - loadbalancer
+  - port: 443:443
+    nodeFilters:
+      - loadbalancer
+
+# Local registry — images pushed here are available inside the cluster
+registries:
+  create:
+    name: registry.localhost
+    host: "0.0.0.0"
+    hostPort: "5001"
+  config: |
+    mirrors:
+      "registry.localhost:5001":
+        endpoint:
+          - http://registry.localhost:5001
+
+options:
+  k3s:
+    extraArgs:
+      # Disable the built-in Traefik v1; we deploy kube-prometheus-stack later
+      # and want Traefik v2 (or keep the default v2 from k3s 1.31+)
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true
