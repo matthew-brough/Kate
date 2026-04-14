@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# uv
+# uv.lock is intentionally committed — do not ignore it
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Kubernetes / Helm
+charts/*/charts/
+charts/*/Chart.lock
+
+# k3d / kubeconfig
+kubeconfig*
+*.kubeconfig
+
+# Tilt
+.tilt/
+tilt_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# Screenshots (committed manually after capture)
+docs/screenshots/*.png
