@@ -1,0 +1,15 @@
+apiVersion: v2
+name: service-template
+description: |
+  Canonical Helm chart template for Kate platform services.
+  This is a REFERENCE chart — copy it, do not add it as a dependency.
+  Each concrete chart should include the full templates directory.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - template
+  - fastapi
+  - kate
+maintainers:
+  - name: matthew-brough

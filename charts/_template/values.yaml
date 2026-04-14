@@ -1,0 +1,74 @@
+# Canonical values — all concrete chart values.yaml files should mirror this shape.
+
+replicaCount: 1
+
+image:
+  repository: registry.localhost:5001/service-name
+  pullPolicy: IfNotPresent
+  tag: ""  # defaults to .Chart.AppVersion
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+# Environment variables passed as plain key/value pairs.
+# Secrets belong in a separate Secret and are mounted as envFrom.
+env:
+  APP_ENV: local
+  APP_LOG_LEVEL: INFO
+  APP_OTLP_ENABLED: "false"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    # No CPU limit — avoids throttling. Budget via requests only.
+    memory: 256Mi
+
+# Horizontal Pod Autoscaler (enabled in Phase 4+)
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+# PodDisruptionBudget (enabled once replicaCount > 1)
+pdb:
+  enabled: false
+  minAvailable: 1
+
+# Prometheus ServiceMonitor (enabled after kube-prometheus-stack is installed)
+serviceMonitor:
+  enabled: false
+  interval: 30s
+
+# NetworkPolicy — deny-all + explicit allows (enabled in Phase 4+)
+networkPolicy:
+  enabled: false
+
+# Liveness / readiness / startup probes
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  startup:
+    path: /health
+    failureThreshold: 30
+    periodSeconds: 2
+
+ingress:
+  enabled: false
+  className: traefik
+  host: ""
+  path: /
