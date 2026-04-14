@@ -1,0 +1,77 @@
+replicaCount: 1
+
+image:
+  repository: registry.localhost:5001/orders-api
+  pullPolicy: IfNotPresent
+  tag: ""  # defaults to appVersion
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+  APP_ENV: local
+  APP_LOG_LEVEL: INFO
+  APP_OTLP_ENABLED: "false"
+  # Constructed from postgresql sub-chart service name.
+  APP_DATABASE_URL: "postgresql+asyncpg://orders:orders@orders-api-postgresql:5432/orders"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+
+networkPolicy:
+  enabled: false
+
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  startup:
+    path: /health
+    failureThreshold: 30
+    periodSeconds: 2
+
+ingress:
+  enabled: false
+  className: traefik
+  host: orders.kate.localhost
+  path: /
+
+# ── PostgreSQL sub-chart ────────────────────────────────────────────────────
+postgresql:
+  enabled: true
+  auth:
+    username: orders
+    password: orders
+    database: orders
+  primary:
+    persistence:
+      enabled: false  # ephemeral for local dev; enable for staging+
