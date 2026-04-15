@@ -1,0 +1,7 @@
+postgresql:
+  enabled: false
+
+env:
+  APP_DATABASE_URL: "postgresql+asyncpg://test:test@localhost:5432/test"
+  APP_OTLP_ENABLED: "false"
+  APP_CELERY_BROKER_URL: "redis://localhost:6379/0"
