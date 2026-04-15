@@ -1,0 +1,16 @@
+apiVersion: v2
+name: redis
+description: Redis — Celery broker and future cache layer
+type: application
+version: 0.1.0
+appVersion: "7.x"
+keywords:
+  - redis
+  - kate
+maintainers:
+  - name: matthew-brough
+
+dependencies:
+  - name: redis
+    version: "20.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
