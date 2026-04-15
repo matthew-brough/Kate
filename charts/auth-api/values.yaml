@@ -1,0 +1,77 @@
+replicaCount: 1
+
+image:
+  repository: registry.localhost:5001/auth-api
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+  APP_ENV: local
+  APP_LOG_LEVEL: INFO
+  APP_OTLP_ENABLED: "false"
+  APP_DATABASE_URL: "postgresql+asyncpg://auth:auth@auth-api-postgresql:5432/auth"
+  APP_JWT_SECRET: "dev-secret-change-in-production"
+  APP_JWT_EXPIRE_MINUTES: "60"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+
+networkPolicy:
+  enabled: false
+
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  startup:
+    path: /health
+    failureThreshold: 30
+    periodSeconds: 2
+
+ingress:
+  enabled: false
+  className: traefik
+  host: auth.kate.localhost
+  path: /
+
+postgresql:
+  enabled: true
+  auth:
+    username: auth
+    password: auth
+    database: auth
+  primary:
+    persistence:
+      enabled: false

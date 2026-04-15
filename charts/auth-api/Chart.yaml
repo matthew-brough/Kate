@@ -1,0 +1,18 @@
+apiVersion: v2
+name: auth-api
+description: Authentication service
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - auth
+  - kate
+  - fastapi
+maintainers:
+  - name: matthew-brough
+
+dependencies:
+  - name: postgresql
+    version: "16.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
