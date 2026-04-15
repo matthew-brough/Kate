@@ -1,0 +1,49 @@
+replicaCount: 1
+
+image:
+  repository: registry.localhost:5001/worker
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+env:
+  APP_ENV: local
+  APP_LOG_LEVEL: INFO
+  # Same DB as report-api — worker writes results to the reports table.
+  APP_DATABASE_URL: "postgresql+asyncpg://reports:reports@report-api-postgresql:5432/reports"
+  APP_CELERY_BROKER_URL: "redis://redis-master:6379/0"
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+
+# KEDA queue-depth autoscaling (see ADR-0002).
+# Requires: bash infra/keda/bootstrap.sh (make keda-up) before enabling.
+keda:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 8
+  cooldownPeriod: 30
+  redisAddress: "redis-master:6379"
+  queueName: "celery"
+  targetListLength: "5"
+
+serviceMonitor:
+  enabled: false
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false

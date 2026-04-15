@@ -1,0 +1,13 @@
+image:
+  tag: latest
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+
+# keda.enabled requires `make keda-up` first.
+# keda:
+#   enabled: true

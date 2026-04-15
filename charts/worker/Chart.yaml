@@ -1,0 +1,12 @@
+apiVersion: v2
+name: worker
+description: Celery worker for report generation
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - worker
+  - celery
+  - kate
+maintainers:
+  - name: matthew-brough

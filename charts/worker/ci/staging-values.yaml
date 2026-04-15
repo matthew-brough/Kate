@@ -1,0 +1,11 @@
+image:
+  tag: latest  # CI sets this to git-sha on promotion
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+
+# keda disabled in staging — worker runs as a fixed single replica
