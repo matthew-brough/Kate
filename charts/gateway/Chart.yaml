@@ -1,0 +1,12 @@
+apiVersion: v2
+name: gateway
+description: API gateway — JWT validation and reverse-proxy
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - gateway
+  - kate
+  - fastapi
+maintainers:
+  - name: matthew-brough

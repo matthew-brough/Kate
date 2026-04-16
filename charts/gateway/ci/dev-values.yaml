@@ -1,0 +1,21 @@
+image:
+  tag: latest
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+
+serviceMonitor:
+  enabled: true
+
+env:
+  APP_OTLP_ENABLED: "true"
+  APP_OTLP_ENDPOINT: "otel-collector.observability.svc.cluster.local:4317"
