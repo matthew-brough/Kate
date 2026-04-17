@@ -1,0 +1,12 @@
+apiVersion: v2
+name: loadgen
+description: Locust headless load generator — continuous synthetic traffic
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - loadgen
+  - locust
+  - kate
+maintainers:
+  - name: matthew-brough

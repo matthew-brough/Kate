@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: registry.localhost:5001/loadgen
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Locust reads all LOCUST_* env vars automatically.
+# Omit LOCUST_RUN_TIME to run indefinitely.
+env:
+  LOCUST_HOST: "http://gateway:8000"
+  LOCUST_USERS: "5"
+  LOCUST_SPAWN_RATE: "1"
+  LOCUST_HEADLESS: "true"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
