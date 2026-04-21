@@ -1,0 +1,60 @@
+grafana:
+  adminPassword: admin
+  service:
+    type: ClusterIP
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      url: http://loki.observability.svc.cluster.local:3100
+      jsonData:
+        derivedFields:
+          - name: TraceID
+            matcherRegex: '"trace_id":"([0-9a-f]{32})"'
+            url: "${__value.raw}"
+            datasourceUid: tempo
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      url: http://tempo.observability.svc.cluster.local:3100
+      jsonData:
+        httpMethod: GET
+        tracesToLogsV2:
+          datasourceUid: loki
+          filterByTraceID: true
+          filterBySpanID: false
+        nodeGraph:
+          enabled: true
+        search:
+          hide: false
+        lokiSearch:
+          datasourceUid: loki
+
+prometheus:
+  prometheusSpec:
+    # Scrape ServiceMonitors from all namespaces (picks up platform/* monitors)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    enableRemoteWriteReceiver: true
+    retention: 7d
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+
+alertmanager:
+  enabled: false
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true

@@ -1,0 +1,22 @@
+config:
+  clients:
+    - url: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+  snippets:
+    pipelineStages:
+      - cri: {}
+      - json:
+          expressions:
+            trace_id: trace_id
+            span_id: span_id
+            level: level
+      - labels:
+          trace_id:
+          span_id:
+          level:
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
