@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kate-worker-queue
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  worker-queue.json: |-
+    {
+      "title": "Kate — Worker & Queue",
+      "uid": "kate-worker",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "15s",
+      "time": {"from": "now-1h", "to": "now"},
+      "timezone": "browser",
+      "tags": ["kate"],
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "pluginId": "prometheus",
+            "query": "prometheus",
+            "current": {},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Data Source"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Celery Queue Depth",
+          "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "short", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "redis_list_length{key=\"celery\"}", "legendFormat": "queue depth", "refId": "A"}
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Worker Replicas",
+          "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "short", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "kube_deployment_status_replicas{namespace=\"platform\",deployment=\"worker\"}", "legendFormat": "total", "refId": "A"},
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "kube_deployment_status_replicas_available{namespace=\"platform\",deployment=\"worker\"}", "legendFormat": "available", "refId": "B"}
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Report Request Rate",
+          "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "reqps", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum(rate(http_requests_total{namespace=\"platform\",job=\"report-api\",handler=~\"/reports.*\",method=\"POST\"}[2m]))", "legendFormat": "POST /reports", "refId": "A"}
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Memory Usage by Pod",
+          "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "bytes", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"platform\",container!=\"\",container!=\"POD\"})", "legendFormat": "{{pod}}", "refId": "A"}
+          ]
+        }
+      ]
+    }

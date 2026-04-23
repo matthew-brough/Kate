@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kate-platform-overview
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  platform-overview.json: |-
+    {
+      "title": "Kate — Platform Overview",
+      "uid": "kate-platform",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "timezone": "browser",
+      "tags": ["kate"],
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "pluginId": "prometheus",
+            "query": "prometheus",
+            "current": {},
+            "hide": 0,
+            "includeAll": false,
+            "label": "Data Source"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Requests / sec",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "reqps", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi", "sort": "desc"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (job) (rate(http_requests_total{namespace=\"platform\"}[2m]))", "legendFormat": "{{job}}", "refId": "A"}
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "5xx Error Rate",
+          "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "percentunit", "max": 1, "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi", "sort": "desc"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (job) (rate(http_requests_total{namespace=\"platform\",status_code=~\"5..\"}[2m])) / sum by (job) (rate(http_requests_total{namespace=\"platform\"}[2m]))", "legendFormat": "{{job}}", "refId": "A"}
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "P99 / P50 Latency",
+          "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "s", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi", "sort": "desc"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.99, sum by (job, le) (rate(http_request_duration_seconds_bucket{namespace=\"platform\"}[2m])))", "legendFormat": "p99 {{job}}", "refId": "A"},
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "histogram_quantile(0.50, sum by (job, le) (rate(http_request_duration_seconds_bucket{namespace=\"platform\"}[2m])))", "legendFormat": "p50 {{job}}", "refId": "B"}
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Pod Count by Deployment",
+          "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "short", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi", "sort": "desc"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "kube_deployment_status_replicas_available{namespace=\"platform\"}", "legendFormat": "{{deployment}}", "refId": "A"}
+          ]
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "CPU Usage by Pod",
+          "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "${datasource}"},
+          "fieldConfig": {
+            "defaults": {"unit": "cores", "custom": {"lineWidth": 2, "fillOpacity": 10}},
+            "overrides": []
+          },
+          "options": {"tooltip": {"mode": "multi", "sort": "desc"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+          "targets": [
+            {"datasource": {"type": "prometheus", "uid": "${datasource}"}, "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"platform\",container!=\"\",container!=\"POD\"}[2m]))", "legendFormat": "{{pod}}", "refId": "A"}
+          ]
+        }
+      ]
+    }
