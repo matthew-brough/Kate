@@ -1,0 +1,12 @@
+apiVersion: v2
+name: chaos-portal
+description: Chaos engineering portal — pod kill and network partition toggle
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - chaos
+  - kate
+  - starlette
+maintainers:
+  - name: matthew-brough

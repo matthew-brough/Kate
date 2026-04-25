@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h2>Pods</h2>
+  {% include "_pod_list.html" %}
+</section>
+
+<section>
+  <h2>Network Partitions</h2>
+  <p style="color:#555; font-size:12px; margin-bottom:12px;">
+    Patches <code>{service}-allow-ingress</code> NetworkPolicy — stores original rules in an
+    annotation and sets <code>ingress: []</code> to block all inbound traffic.
+  </p>
+  {% include "_partition_list.html" %}
+</section>
+{% endblock %}

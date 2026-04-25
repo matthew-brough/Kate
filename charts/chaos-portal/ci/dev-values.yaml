@@ -1,0 +1,6 @@
+image:
+  tag: latest
+
+env:
+  CHAOS_NAMESPACE: "platform"
+  CHAOS_SERVICES: "orders-api,auth-api,report-api,worker"

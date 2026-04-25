@@ -1,0 +1,34 @@
+<div id="partition-list">
+  {% for service in services %}
+  <div class="service-row">
+    <span class="service-name">{{ service }}</span>
+    <span class="service-status">
+      {% if service in active_partitions %}
+      <span class="badge-partition">PARTITIONED</span>
+      {% else %}
+      <span style="color:#333">—</span>
+      {% endif %}
+    </span>
+    {% if service in active_partitions %}
+    <button class="restore"
+            hx-post="/partitions/{{ service }}/toggle"
+            hx-target="#partition-list"
+            hx-swap="outerHTML"
+            hx-confirm="Restore {{ service }}? Traffic will resume.">
+      restore
+    </button>
+    {% else %}
+    <button class="partition"
+            hx-post="/partitions/{{ service }}/toggle"
+            hx-target="#partition-list"
+            hx-swap="outerHTML"
+            hx-confirm="Partition {{ service }}? All ingress will be blocked.">
+      partition
+    </button>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% if not services %}
+  <p class="empty">No services configured (CHAOS_SERVICES env var).</p>
+  {% endif %}
+</div>

@@ -1,0 +1,16 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "chaos-portal.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "chaos-portal.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "chaos-portal.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "chaos-portal.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

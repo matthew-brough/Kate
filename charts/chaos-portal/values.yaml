@@ -1,0 +1,49 @@
+replicaCount: 1
+
+image:
+  repository: registry.localhost:5001/chaos-portal
+  pullPolicy: IfNotPresent
+  tag: ""  # defaults to appVersion
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+  CHAOS_NAMESPACE: "platform"
+  CHAOS_SERVICES: "orders-api,auth-api,report-api,worker"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+serviceAccount:
+  create: true
+
+rbac:
+  create: true
+
+networkPolicy:
+  enabled: false
+
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 5
+    periodSeconds: 30
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    initialDelaySeconds: 3
+    periodSeconds: 10
+    failureThreshold: 3
+  startup:
+    path: /health
+    failureThreshold: 15
+    periodSeconds: 2
