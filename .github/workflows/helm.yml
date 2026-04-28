@@ -1,0 +1,30 @@
+name: Helm
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+
+      - uses: helm/chart-testing-action@v2.7.0
+
+      - name: Helm lint — all charts
+        run: |
+          for chart in charts/*/; do
+            name=$(basename "$chart")
+            [ "$name" = "_template" ] && continue
+            echo "==> Linting $name"
+            helm lint "$chart"
+          done
+
+      - name: ct lint
+        run: ct lint --all --chart-dirs charts --validate-maintainers=false

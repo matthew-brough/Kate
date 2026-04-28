@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - orders-api
+          - auth-api
+          - gateway
+          - report-api
+          - worker
+          - loadgen
+          - chaos-portal
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "services/${{ matrix.service }}/uv.lock"
+
+      - name: Install deps
+        working-directory: services/${{ matrix.service }}
+        run: uv sync
+
+      - name: Lint — ruff
+        working-directory: services/${{ matrix.service }}
+        run: uv run ruff check src/
+
+      - name: Type-check — pyright
+        working-directory: services/${{ matrix.service }}
+        run: uv run pyright src/
+
+      - name: Unit tests
+        working-directory: services/${{ matrix.service }}
+        if: matrix.service != 'loadgen'
+        run: uv run pytest
+
+      - name: Integration tests
+        working-directory: services/${{ matrix.service }}
+        if: |
+          matrix.service == 'orders-api' ||
+          matrix.service == 'auth-api'   ||
+          matrix.service == 'report-api'
+        env:
+          INTEGRATION: "1"
+        run: uv run pytest tests/test_integration.py -v
