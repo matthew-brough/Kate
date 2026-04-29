@@ -12,7 +12,16 @@
     }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
+  "mounts": [
+    "source=kate-venv-gateway,target=${containerWorkspaceFolder}/services/gateway/.venv,type=volume",
+    "source=kate-venv-auth-api,target=${containerWorkspaceFolder}/services/auth-api/.venv,type=volume",
+    "source=kate-venv-orders-api,target=${containerWorkspaceFolder}/services/orders-api/.venv,type=volume",
+    "source=kate-venv-report-api,target=${containerWorkspaceFolder}/services/report-api/.venv,type=volume",
+    "source=kate-venv-chaos-portal,target=${containerWorkspaceFolder}/services/chaos-portal/.venv,type=volume",
+    "source=kate-venv-worker,target=${containerWorkspaceFolder}/services/worker/.venv,type=volume",
+    "source=kate-venv-loadgen,target=${containerWorkspaceFolder}/services/loadgen/.venv,type=volume"
+  ],
+  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && for svc in gateway auth-api orders-api report-api chaos-portal worker loadgen; do sudo chown -R vscode:vscode ${containerWorkspaceFolder}/services/$svc/.venv 2>/dev/null || true; echo \"→ uv sync: $svc\" && (cd ${containerWorkspaceFolder}/services/$svc && uv sync); done",
   "customizations": {
     "vscode": {
       "settings": {
