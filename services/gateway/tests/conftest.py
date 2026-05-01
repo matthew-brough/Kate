@@ -32,6 +32,8 @@ def valid_token() -> str:
         "username": "testuser",
         "iat": datetime.now(UTC),
         "exp": datetime.now(UTC) + timedelta(hours=1),
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 

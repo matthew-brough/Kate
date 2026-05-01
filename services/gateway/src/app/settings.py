@@ -24,8 +24,10 @@ class Settings(BaseSettings):
     orders_api_url: str = "http://orders-api:8000"
     report_api_url: str = "http://report-api:8000"
 
-    # Must match auth-api's jwt_secret
+    # Must match auth-api's jwt_secret, jwt_issuer, jwt_audience
     jwt_secret: str = "dev-secret-change-in-production"
+    jwt_issuer: str = "kate-auth-api"
+    jwt_audience: str = "kate-platform"
 
     http_timeout: float = 30.0
 

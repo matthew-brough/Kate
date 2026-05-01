@@ -17,7 +17,13 @@ def require_auth(authorization: Annotated[str | None, Header()] = None) -> Token
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing Authorization header")
     raw = authorization.removeprefix("Bearer ").strip()
     try:
-        payload = jwt.decode(raw, settings.jwt_secret, algorithms=["HS256"])
+        payload = jwt.decode(
+            raw,
+            settings.jwt_secret,
+            algorithms=["HS256"],
+            audience=settings.jwt_audience,
+            issuer=settings.jwt_issuer,
+        )
         return TokenPayload(sub=str(payload["sub"]), username=str(payload["username"]))
     except jwt.PyJWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token") from exc

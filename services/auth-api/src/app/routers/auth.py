@@ -1,3 +1,4 @@
+import jwt
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -57,5 +58,5 @@ async def verify(authorization: str = Header(...)) -> TokenPayload:
     try:
         payload = decode_access_token(raw)
         return TokenPayload(sub=str(payload["sub"]), username=str(payload["username"]))
-    except Exception as exc:
+    except jwt.PyJWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token") from exc

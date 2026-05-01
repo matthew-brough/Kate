@@ -20,12 +20,12 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    database_url: PostgresDsn = PostgresDsn(
-        "postgresql+asyncpg://auth:auth@localhost:5432/auth"
-    )
+    database_url: PostgresDsn = PostgresDsn("postgresql+asyncpg://auth:auth@localhost:5432/auth")
 
     jwt_secret: str = "dev-secret-change-in-production!"
     jwt_expire_minutes: int = 60
+    jwt_issuer: str = "kate-auth-api"
+    jwt_audience: str = "kate-platform"
 
 
 settings = Settings()
