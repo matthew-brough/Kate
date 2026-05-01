@@ -1,3 +1,5 @@
+from typing import cast
+
 import httpx
 import structlog
 from fastapi import APIRouter, Request
@@ -11,7 +13,7 @@ log: structlog.stdlib.BoundLogger = structlog.get_logger()
 
 
 def _get_client(request: Request) -> httpx.AsyncClient:
-    return request.app.state.http_client  # type: ignore[no-any-return]
+    return cast(httpx.AsyncClient, request.app.state.http_client)
 
 
 async def _proxy(
@@ -21,11 +23,8 @@ async def _proxy(
 ) -> Response:
     client = _get_client(request)
 
-    headers = {
-        k: v
-        for k, v in request.headers.items()
-        if k.lower() not in ("host", "content-length")
-    }
+    _strip = {"host", "content-length", "authorization", "x-user-id", "x-username"}
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in _strip}
     if user is not None:
         headers["X-User-Id"] = user.sub
         headers["X-Username"] = user.username
@@ -53,6 +52,7 @@ async def _proxy(
 
 # ── Auth routes (no JWT required) ────────────────────────────────────────────
 
+
 @router.api_route(
     "/api/auth/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -64,6 +64,7 @@ async def proxy_auth(path: str, request: Request) -> Response:
 
 
 # ── Orders routes (JWT required) ─────────────────────────────────────────────
+
 
 @router.api_route(
     "/api/orders/{path:path}",
@@ -86,6 +87,7 @@ async def proxy_orders_root(request: Request, user: AuthDep) -> Response:
 
 
 # ── Reports routes (JWT required) ────────────────────────────────────────────
+
 
 @router.api_route(
     "/api/reports/{path:path}",

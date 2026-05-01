@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.logging_config import configure_logging
-from app.middleware import RequestLoggingMiddleware
+from app.middleware import RateLimitMiddleware, RequestLoggingMiddleware
 from app.routers import health, proxy
 from app.settings import settings
 from app.telemetry import configure_telemetry
@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(RateLimitMiddleware)
 
     Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
