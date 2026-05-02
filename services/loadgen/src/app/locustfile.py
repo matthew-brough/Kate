@@ -3,7 +3,6 @@
 Simulates the browse → buy → report flow continuously.
 Locust env vars control behaviour: LOCUST_HOST, LOCUST_USERS, LOCUST_SPAWN_RATE.
 """
-from __future__ import annotations
 
 import random
 import string
@@ -23,13 +22,11 @@ class PlatformUser(HttpUser):
     wait_time = between(1, 3)
 
     _token: str
-    _user_id: str
 
     def on_start(self) -> None:
         suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
         username = f"load_{suffix}"
         password = "L0adG3n!pw"
-        self._user_id = str(uuid.uuid4())
 
         self.client.post(
             "/api/auth/register",
@@ -60,7 +57,6 @@ class PlatformUser(HttpUser):
             "/api/orders",
             headers=self._auth(),
             json={
-                "user_id": self._user_id,
                 "product_id": random.choice(PRODUCTS),
                 "quantity": random.randint(1, 5),
                 "unit_price": round(random.uniform(9.99, 199.99), 2),

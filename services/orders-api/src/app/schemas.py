@@ -6,7 +6,6 @@ from app.models import OrderStatus
 
 
 class OrderCreate(BaseModel):
-    user_id: str = Field(min_length=1, max_length=36)
     product_id: str = Field(min_length=1, max_length=36)
     quantity: int = Field(ge=1)
     unit_price: float = Field(gt=0)
