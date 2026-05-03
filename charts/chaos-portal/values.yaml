@@ -30,7 +30,7 @@ rbac:
   create: true
 
 networkPolicy:
-  enabled: false
+  enabled: true
 
 probes:
   liveness:

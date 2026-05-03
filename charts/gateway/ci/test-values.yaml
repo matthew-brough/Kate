@@ -1,3 +1,4 @@
+jwtSecret: "test-secret"
+
 env:
   APP_OTLP_ENABLED: "false"
-  APP_JWT_SECRET: "test-secret"

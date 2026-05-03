@@ -12,6 +12,9 @@ service:
   type: ClusterIP
   port: 8000
 
+# JWT secret is injected via a k8s Secret — override this in production with a strong value.
+jwtSecret: "dev-secret-change-in-production"
+
 env:
   APP_ENV: local
   APP_LOG_LEVEL: INFO
@@ -19,7 +22,6 @@ env:
   APP_AUTH_API_URL: "http://auth-api:8000"
   APP_ORDERS_API_URL: "http://orders-api:8000"
   APP_REPORT_API_URL: "http://report-api:8000"
-  APP_JWT_SECRET: "dev-secret-change-in-production"
 
 resources:
   requests:
@@ -43,7 +45,7 @@ serviceMonitor:
   interval: 30s
 
 networkPolicy:
-  enabled: false
+  enabled: true
 
 probes:
   liveness:

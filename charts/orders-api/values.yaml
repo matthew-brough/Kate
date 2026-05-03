@@ -41,7 +41,7 @@ serviceMonitor:
   interval: 30s
 
 networkPolicy:
-  enabled: false
+  enabled: true
 
 probes:
   liveness:

@@ -12,12 +12,14 @@ service:
   type: ClusterIP
   port: 8000
 
+# JWT secret is injected via a k8s Secret — override this in production with a strong value.
+jwtSecret: "dev-secret-change-in-production!"
+
 env:
   APP_ENV: local
   APP_LOG_LEVEL: INFO
   APP_OTLP_ENABLED: "false"
   APP_DATABASE_URL: "postgresql+asyncpg://auth:auth@auth-api-postgresql:5432/auth"
-  APP_JWT_SECRET: "dev-secret-change-in-production"
   APP_JWT_EXPIRE_MINUTES: "60"
 
 resources:
@@ -42,7 +44,7 @@ serviceMonitor:
   interval: 30s
 
 networkPolicy:
-  enabled: false
+  enabled: true
 
 probes:
   liveness:
