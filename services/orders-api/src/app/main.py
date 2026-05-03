@@ -1,10 +1,6 @@
-import asyncio
 from collections.abc import AsyncGenerator, Callable
-from contextlib import asynccontextmanager
-from typing import Any
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
-from alembic import command
-from alembic.config import Config
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -20,13 +16,13 @@ from app.telemetry import configure_telemetry
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     configure_logging()
     configure_telemetry(app)
-    alembic_cfg = Config("alembic.ini")
-    await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
     yield
     await _db.engine.dispose()
 
 
-def create_app(lifespan_fn: Callable[[FastAPI], Any] = lifespan) -> FastAPI:
+def create_app(
+    lifespan_fn: Callable[[FastAPI], AbstractAsyncContextManager[None]] = lifespan,
+) -> FastAPI:
     app = FastAPI(
         title=settings.service_name,
         version=settings.service_version,

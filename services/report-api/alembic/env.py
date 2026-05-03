@@ -1,9 +1,12 @@
 import asyncio
 from logging.config import fileConfig
-from typing import Any
+from typing import TYPE_CHECKING
 
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection
 
 from app.db import Base  # noqa: F401
 from app.models import Report  # noqa: F401
@@ -29,7 +32,7 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection: Any) -> None:
+def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()

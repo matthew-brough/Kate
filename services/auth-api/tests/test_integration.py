@@ -32,9 +32,7 @@ async def pg_engine() -> AsyncGenerator[AsyncEngine]:
     from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
     with PostgresContainer("postgres:16-alpine") as pg:
-        url = pg.get_connection_url().replace(
-            "postgresql+psycopg2://", "postgresql+asyncpg://"
-        )
+        url = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql+asyncpg://")
         engine = create_async_engine(url)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
@@ -57,9 +55,7 @@ async def pg_client(pg_engine: AsyncEngine) -> AsyncGenerator[AsyncClient]:
     instance = create_app()
     instance.dependency_overrides[get_session] = _get_session
 
-    async with AsyncClient(
-        transport=ASGITransport(app=instance), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=instance), base_url="http://test") as c:
         yield c
 
     instance.dependency_overrides.clear()
@@ -90,9 +86,7 @@ async def test_pg_duplicate_email_rejected(pg_client: AsyncClient) -> None:
 
 
 async def test_pg_verify_token(pg_client: AsyncClient) -> None:
-    await pg_client.post(
-        "/register", json={"email": "verify@example.com", "password": "pass1234"}
-    )
+    await pg_client.post("/register", json={"email": "verify@example.com", "password": "pass1234"})
     token_r = await pg_client.post(
         "/token",
         data={"username": "verify@example.com", "password": "pass1234"},
@@ -100,17 +94,13 @@ async def test_pg_verify_token(pg_client: AsyncClient) -> None:
     )
     token = token_r.json()["access_token"]
 
-    r = await pg_client.get(
-        "/verify", headers={"Authorization": f"Bearer {token}"}
-    )
+    r = await pg_client.get("/verify", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
     assert r.json()["email"] == "verify@example.com"
 
 
 async def test_pg_wrong_password_rejected(pg_client: AsyncClient) -> None:
-    await pg_client.post(
-        "/register", json={"email": "wrong@example.com", "password": "correct"}
-    )
+    await pg_client.post("/register", json={"email": "wrong@example.com", "password": "correct"})
     r = await pg_client.post(
         "/token",
         data={"username": "wrong@example.com", "password": "incorrect"},

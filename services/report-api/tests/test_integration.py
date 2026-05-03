@@ -34,9 +34,7 @@ async def pg_engine() -> AsyncGenerator[AsyncEngine]:
     from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
     with PostgresContainer("postgres:16-alpine") as pg:
-        url = pg.get_connection_url().replace(
-            "postgresql+psycopg2://", "postgresql+asyncpg://"
-        )
+        url = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql+asyncpg://")
         engine = create_async_engine(url)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
@@ -59,9 +57,7 @@ async def pg_client(pg_engine: AsyncEngine) -> AsyncGenerator[AsyncClient]:
     instance = create_app()
     instance.dependency_overrides[get_session] = _get_session
 
-    async with AsyncClient(
-        transport=ASGITransport(app=instance), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=instance), base_url="http://test") as c:
         yield c
 
     instance.dependency_overrides.clear()
@@ -99,5 +95,6 @@ async def test_pg_poll_returns_pending(pg_client: AsyncClient) -> None:
 
 async def test_pg_unknown_report_404(pg_client: AsyncClient) -> None:
     import uuid
+
     r = await pg_client.get(f"/reports/{uuid.uuid4()}")
     assert r.status_code == 404

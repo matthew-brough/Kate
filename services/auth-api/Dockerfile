@@ -10,6 +10,8 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock* ./
 COPY src/ ./src/
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 
 RUN uv sync --no-dev --no-editable
 
@@ -44,6 +46,8 @@ RUN useradd -r -u 1001 -s /bin/false appuser
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/alembic.ini ./
+COPY --from=builder /app/alembic/ ./alembic/
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
