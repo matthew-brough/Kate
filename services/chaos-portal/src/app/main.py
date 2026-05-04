@@ -1,5 +1,8 @@
+import hmac
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
+from collections.abc import AsyncIterator
 
 import structlog
 from starlette.applications import Starlette
@@ -8,6 +11,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 from starlette.templating import Jinja2Templates
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app import k8s
 
@@ -26,6 +30,14 @@ NAMESPACE = os.getenv("CHAOS_NAMESPACE", "platform")
 SERVICES = os.getenv("CHAOS_SERVICES", "orders-api,auth-api,report-api,worker").split(",")
 CHAOS_TOKEN = os.getenv("CHAOS_TOKEN", "")
 
+
+@asynccontextmanager
+async def lifespan(app: Starlette) -> AsyncIterator[None]:
+    if not CHAOS_TOKEN:
+        raise RuntimeError("CHAOS_TOKEN env var is not set. Refusing to start unprotected.")
+    yield
+
+
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 _OPEN_PATHS = {"/health", "/ready"}
@@ -34,17 +46,18 @@ _OPEN_PATHS = {"/health", "/ready"}
 class TokenAuthMiddleware:
     """Require X-Chaos-Token header on all non-health paths when CHAOS_TOKEN is set."""
 
-    def __init__(self, app: object) -> None:
+    def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
-    async def __call__(self, scope: dict, receive: object, send: object) -> None:
-        if CHAOS_TOKEN and scope["type"] == "http" and scope["path"] not in _OPEN_PATHS:
-            request = Request(scope)  # type: ignore[arg-type]
-            if request.headers.get("X-Chaos-Token") != CHAOS_TOKEN:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"] not in _OPEN_PATHS:
+            request = Request(scope)
+            incoming = request.headers.get("X-Chaos-Token", "")
+            if not hmac.compare_digest(incoming, CHAOS_TOKEN):
                 response = Response("Unauthorized", status_code=401)
-                await response(scope, receive, send)  # type: ignore[arg-type]
+                await response(scope, receive, send)
                 return
-        await self.app(scope, receive, send)  # type: ignore[arg-type]
+        await self.app(scope, receive, send)
 
 
 async def index(request: Request) -> Response:
@@ -112,6 +125,7 @@ async def ready(request: Request) -> Response:
 
 
 app = Starlette(
+    lifespan=lifespan,
     middleware=[Middleware(TokenAuthMiddleware)],
     routes=[
         Route("/", index),

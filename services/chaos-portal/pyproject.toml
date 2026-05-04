@@ -19,6 +19,7 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.8.0",
     "pyright>=1.1.391",
+    "kubernetes-stubs-elephant-fork>=31.0.0",
 ]
 
 [build-system]

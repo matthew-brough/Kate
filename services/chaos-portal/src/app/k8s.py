@@ -1,12 +1,11 @@
-from __future__ import annotations
-
 import json
 import logging
 from dataclasses import dataclass
 from typing import Any
 
-from kubernetes import client, config  # type: ignore[import-untyped]
-from kubernetes.client.exceptions import ApiException  # type: ignore[import-untyped]
+from kubernetes import client, config
+from kubernetes.client.api_client import ApiClient
+from kubernetes.client.exceptions import ApiException
 
 logger = logging.getLogger(__name__)
 
@@ -52,14 +51,21 @@ def list_pods(namespace: str) -> list[PodInfo]:
     pods = _core().list_namespaced_pod(namespace=namespace)
     result: list[PodInfo] = []
     for pod in pods.items:
-        statuses = pod.status.container_statuses or []
+        meta = pod.metadata
+        status = pod.status
+        spec = pod.spec
+        if meta is None or status is None or spec is None or meta.name is None:
+            continue
+        statuses = status.container_statuses or []
         ready_count = sum(1 for s in statuses if s.ready)
-        result.append(PodInfo(
-            name=pod.metadata.name,
-            phase=pod.status.phase or "Unknown",
-            ready=f"{ready_count}/{len(statuses)}",
-            node=pod.spec.node_name or "-",
-        ))
+        result.append(
+            PodInfo(
+                name=meta.name,
+                phase=status.phase or "Unknown",
+                ready=f"{ready_count}/{len(statuses)}",
+                node=spec.node_name or "-",
+            )
+        )
     return sorted(result, key=lambda p: p.name)
 
 
@@ -68,15 +74,16 @@ def delete_pod(namespace: str, name: str) -> None:
 
 
 def list_partitions(namespace: str) -> list[PartitionInfo]:
-    policies: Any = _networking().list_namespaced_network_policy(namespace=namespace)
+    policies = _networking().list_namespaced_network_policy(namespace=namespace)
     result: list[PartitionInfo] = []
     for policy in policies.items:
-        annotations = policy.metadata.annotations or {}
+        meta = policy.metadata
+        if meta is None or meta.name is None:
+            continue
+        annotations = meta.annotations or {}
         if annotations.get("chaos.kate.dev/partition-active") == "true":
-            service = (policy.metadata.labels or {}).get(
-                "chaos.kate.dev/service", policy.metadata.name
-            )
-            result.append(PartitionInfo(service=service, policy_name=policy.metadata.name))
+            service = (meta.labels or {}).get("chaos.kate.dev/service", meta.name)
+            result.append(PartitionInfo(service=service, policy_name=meta.name))
     return result
 
 
@@ -91,9 +98,7 @@ def toggle_partition(namespace: str, service: str) -> bool:
     """
     policy_name = f"{service}-allow-ingress"
     try:
-        policy: Any = _networking().read_namespaced_network_policy(
-            name=policy_name, namespace=namespace
-        )
+        policy = _networking().read_namespaced_network_policy(name=policy_name, namespace=namespace)
     except ApiException as e:
         if e.status == 404:
             raise ValueError(
@@ -102,11 +107,15 @@ def toggle_partition(namespace: str, service: str) -> bool:
             ) from e
         raise
 
+    if policy.metadata is None or policy.spec is None:
+        raise ValueError(
+            f"NetworkPolicy {policy_name!r} returned without metadata/spec from API server."
+        )
     annotations = policy.metadata.annotations or {}
 
     if annotations.get("chaos.kate.dev/partition-active") == "true":
         original = json.loads(annotations.get("chaos.kate.dev/original-ingress", "[]"))
-        patch: dict = {
+        patch: dict[str, Any] = {
             "metadata": {
                 "annotations": {
                     "chaos.kate.dev/partition-active": None,
@@ -122,12 +131,11 @@ def toggle_partition(namespace: str, service: str) -> bool:
         )
         return False
     else:
-        api_client = _networking().api_client
+        api_client = ApiClient()
         ingress_rules = [
-            api_client.sanitize_for_serialization(r)
-            for r in (policy.spec.ingress or [])
+            api_client.sanitize_for_serialization(r) for r in (policy.spec.ingress or [])
         ]
-        patch = {
+        patch: dict[str, Any] = {
             "metadata": {
                 "annotations": {
                     "chaos.kate.dev/partition-active": "true",

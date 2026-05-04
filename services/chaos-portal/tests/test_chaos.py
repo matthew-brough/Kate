@@ -3,13 +3,10 @@ from unittest.mock import MagicMock, patch
 from starlette.testclient import TestClient
 
 from app.k8s import PartitionInfo, PodInfo
-from app.main import app
-
-client = TestClient(app, raise_server_exceptions=False)
 
 
 @patch("app.main.k8s")
-def test_index(mock_k8s: MagicMock) -> None:
+def test_index(mock_k8s: MagicMock, client: TestClient) -> None:
     mock_k8s.list_pods.return_value = []
     mock_k8s.list_partitions.return_value = []
     resp = client.get("/")
@@ -19,7 +16,7 @@ def test_index(mock_k8s: MagicMock) -> None:
 
 
 @patch("app.main.k8s")
-def test_pod_list(mock_k8s: MagicMock) -> None:
+def test_pod_list(mock_k8s: MagicMock, client: TestClient) -> None:
     mock_k8s.list_pods.return_value = [
         PodInfo(name="orders-api-abc123", phase="Running", ready="1/1", node="k3d-agent-0"),
         PodInfo(name="gateway-xyz789", phase="Pending", ready="0/1", node="-"),
@@ -33,7 +30,7 @@ def test_pod_list(mock_k8s: MagicMock) -> None:
 
 
 @patch("app.main.k8s")
-def test_kill_pod(mock_k8s: MagicMock) -> None:
+def test_kill_pod(mock_k8s: MagicMock, client: TestClient) -> None:
     mock_k8s.delete_pod.return_value = None
     mock_k8s.list_pods.return_value = []
     resp = client.post("/pods/orders-api-abc123/kill")
@@ -42,7 +39,7 @@ def test_kill_pod(mock_k8s: MagicMock) -> None:
 
 
 @patch("app.main.k8s")
-def test_partition_list(mock_k8s: MagicMock) -> None:
+def test_partition_list(mock_k8s: MagicMock, client: TestClient) -> None:
     mock_k8s.list_partitions.return_value = [
         PartitionInfo(service="orders-api", policy_name="orders-api-allow-ingress")
     ]
@@ -53,7 +50,7 @@ def test_partition_list(mock_k8s: MagicMock) -> None:
 
 
 @patch("app.main.k8s")
-def test_toggle_partition_apply(mock_k8s: MagicMock) -> None:
+def test_toggle_partition_apply(mock_k8s: MagicMock, client: TestClient) -> None:
     mock_k8s.toggle_partition.return_value = True
     mock_k8s.list_partitions.return_value = [
         PartitionInfo(service="orders-api", policy_name="orders-api-allow-ingress")
@@ -65,7 +62,7 @@ def test_toggle_partition_apply(mock_k8s: MagicMock) -> None:
 
 
 @patch("app.main.k8s")
-def test_toggle_partition_restore(mock_k8s: MagicMock) -> None:
+def test_toggle_partition_restore(mock_k8s: MagicMock, client: TestClient) -> None:
     mock_k8s.toggle_partition.return_value = False
     mock_k8s.list_partitions.return_value = []
     resp = client.post("/partitions/orders-api/toggle")
@@ -73,10 +70,10 @@ def test_toggle_partition_restore(mock_k8s: MagicMock) -> None:
     assert "PARTITIONED" not in resp.text
 
 
-def test_health() -> None:
+def test_health(client: TestClient) -> None:
     assert client.get("/health").status_code == 200
     assert client.get("/health").text == "ok"
 
 
-def test_ready() -> None:
+def test_ready(client: TestClient) -> None:
     assert client.get("/ready").status_code == 200
