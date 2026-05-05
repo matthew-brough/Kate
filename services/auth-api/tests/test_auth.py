@@ -92,8 +92,6 @@ async def test_verify_invalid_token_returns_401(client: AsyncClient) -> None:
         {"email": "x@example.com", "password": "secret123"},  # missing username
     ],
 )
-async def test_register_missing_fields(
-    client: AsyncClient, payload: dict[str, str]
-) -> None:
+async def test_register_missing_fields(client: AsyncClient, payload: dict[str, str]) -> None:
     r = await client.post("/auth/register", json=payload)
     assert r.status_code == 422

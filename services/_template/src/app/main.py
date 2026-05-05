@@ -12,7 +12,7 @@ from app.telemetry import configure_telemetry
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     configure_logging()
     configure_telemetry(app)
     yield

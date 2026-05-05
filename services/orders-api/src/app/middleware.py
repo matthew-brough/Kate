@@ -13,9 +13,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger()
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = str(uuid.uuid4())
 
         span = trace.get_current_span()

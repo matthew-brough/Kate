@@ -2,7 +2,6 @@
 
 import logging
 import sys
-from typing import Any
 
 import structlog
 from structlog.types import EventDict, Processor
@@ -30,7 +29,7 @@ def configure_logging() -> None:
         _drop_colour_message,
     ]
 
-    renderer: Any
+    renderer: Processor
     if sys.stderr.isatty():
         renderer = structlog.dev.ConsoleRenderer()
     else:
