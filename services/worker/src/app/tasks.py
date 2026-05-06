@@ -5,6 +5,7 @@ import uuid
 
 import structlog
 from celery import Task
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -59,11 +60,17 @@ async def _fail_report(report_id: str) -> None:
     await engine.dispose()  # type: ignore[union-attr]
 
 
-@celery_app.task(bind=True, max_retries=3, name="app.tasks.generate_report")
+@celery_app.task(bind=True, max_retries=5, name="app.tasks.generate_report")
 def generate_report(self: Task, report_id: str) -> None:
     try:
         asyncio.run(_process_report(report_id))
+    except OperationalError as exc:
+        # Transient DB error — retry with exponential backoff; do not mark failed yet.
+        delay = 5 * (2 ** self.request.retries)
+        log.warning("report_task_retry", report_id=report_id, attempt=self.request.retries, delay=delay, error=str(exc))
+        raise self.retry(exc=exc, countdown=delay) from exc
     except Exception as exc:
-        log.error("report_task_error", report_id=report_id, error=str(exc))
+        # Fatal — mark failed and do not retry.
+        log.error("report_task_failed", report_id=report_id, error=str(exc))
         asyncio.run(_fail_report(report_id))
-        raise self.retry(exc=exc, countdown=5) from exc
+        raise
