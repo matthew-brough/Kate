@@ -17,6 +17,12 @@ jobs:
 
       - uses: helm/chart-testing-action@v2.7.0
 
+      - name: Install kubeconform
+        run: |
+          KUBECONFORM_VERSION=v0.6.7
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar xz -C /usr/local/bin kubeconform
+
       - name: Helm lint — all charts
         run: |
           for chart in charts/*/; do
@@ -24,6 +30,18 @@ jobs:
             [ "$name" = "_template" ] && continue
             echo "==> Linting $name"
             helm lint "$chart"
+          done
+
+      - name: kubeconform — validate rendered templates
+        run: |
+          for chart in charts/*/; do
+            name=$(basename "$chart")
+            [ "$name" = "_template" ] && continue
+            values_file="$chart/ci/dev-values.yaml"
+            echo "==> kubeconform $name"
+            helm template "$name" "$chart" \
+              ${values_file:+-f "$values_file"} \
+              | kubeconform -strict -ignore-missing-schemas -
           done
 
       - name: ct lint
