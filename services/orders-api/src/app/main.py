@@ -1,6 +1,10 @@
-from collections.abc import AsyncGenerator
+import asyncio
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
+from typing import Any
 
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -16,19 +20,17 @@ from app.telemetry import configure_telemetry
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     configure_logging()
     configure_telemetry(app)
-    # Phase 1: create tables directly. Phase 2+ will use Alembic migrations.
-    # Uses _db.engine (not a bound name) so tests can patch it via app.db.engine.
-    async with _db.engine.begin() as conn:
-        await conn.run_sync(_db.Base.metadata.create_all)
+    alembic_cfg = Config("alembic.ini")
+    await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
     yield
     await _db.engine.dispose()
 
 
-def create_app() -> FastAPI:
+def create_app(lifespan_fn: Callable[[FastAPI], Any] = lifespan) -> FastAPI:
     app = FastAPI(
         title=settings.service_name,
         version=settings.service_version,
-        lifespan=lifespan,
+        lifespan=lifespan_fn,
         redoc_url=None,
     )
 
