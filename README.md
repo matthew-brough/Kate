@@ -73,7 +73,7 @@ Three workflows:
 | [`build.yml`](.github/workflows/build.yml) | push to `main` | docker build → push to GHCR |
 | [`helm.yml`](.github/workflows/helm.yml) | every push + PR | helm lint · ct lint |
 
-Integration tests spin up real Postgres containers via testcontainers; no external services needed.
+Integration tests spin up real Postgres containers via testcontainers; Docker is required to run them.
 
 ## Makefile targets
 
