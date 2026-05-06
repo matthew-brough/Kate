@@ -2,7 +2,6 @@ import httpx
 import structlog
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
-from starlette.background import BackgroundTask
 
 from app.auth import AuthDep, TokenPayload
 from app.settings import settings
@@ -49,7 +48,6 @@ async def _proxy(
         content=upstream.content,
         status_code=upstream.status_code,
         headers=dict(upstream.headers),
-        background=BackgroundTask(lambda: None),
     )
 
 
