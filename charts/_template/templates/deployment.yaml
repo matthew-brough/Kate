@@ -15,11 +15,6 @@ spec:
   template:
     metadata:
       labels: {{- include "svc.selectorLabels" . | nindent 8 }}
-      annotations:
-        # Prometheus will scrape /metrics even without a ServiceMonitor.
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "{{ .Values.service.port }}"
-        prometheus.io/path: "/metrics"
     spec:
       securityContext:
         runAsNonRoot: true
