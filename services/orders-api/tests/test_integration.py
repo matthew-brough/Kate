@@ -27,8 +27,8 @@ pytestmark = pytest.mark.skipif(
     reason="set INTEGRATION=1 to run integration tests (requires Docker)",
 )
 
+_USER_ID = "user-integ-001"
 _ORDER = {
-    "user_id": "user-integ-001",
     "product_id": "prod-integ-abc",
     "quantity": 5,
     "unit_price": 12.50,
@@ -63,7 +63,11 @@ async def pg_client(pg_engine: AsyncEngine) -> AsyncGenerator[AsyncClient]:
     instance = create_app()
     instance.dependency_overrides[get_session] = _get_session
 
-    async with AsyncClient(transport=ASGITransport(app=instance), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=instance),
+        base_url="http://test",
+        headers={"X-User-Id": _USER_ID},
+    ) as c:
         yield c
 
     instance.dependency_overrides.clear()
