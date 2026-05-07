@@ -70,10 +70,17 @@ ingress:
 
 postgresql:
   enabled: true
+  image:
+    repository: postgres
+    tag: "17-alpine"
+    pullPolicy: IfNotPresent
   auth:
     username: auth
     password: auth
     database: auth
-  primary:
-    persistence:
-      enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

@@ -1,15 +1,11 @@
-# Bitnami Redis sub-chart values.
-# Phase 2: standalone broker. Phase 7: chaos flag will also be stored here.
-redis:
-  architecture: standalone
-  auth:
-    enabled: false
-  master:
-    persistence:
-      enabled: false
-    resources:
-      requests:
-        cpu: 100m
-        memory: 64Mi
-      limits:
-        memory: 128Mi
+image:
+  repository: redis
+  tag: "7-alpine"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi

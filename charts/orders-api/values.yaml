@@ -68,10 +68,17 @@ ingress:
 # ── PostgreSQL sub-chart ────────────────────────────────────────────────────
 postgresql:
   enabled: true
+  image:
+    repository: postgres
+    tag: "17-alpine"
+    pullPolicy: IfNotPresent
   auth:
     username: orders
     password: orders
     database: orders
-  primary:
-    persistence:
-      enabled: false  # ephemeral for local dev; enable for staging+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

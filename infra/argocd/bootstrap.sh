@@ -15,22 +15,6 @@ helm upgrade --install argocd argo/argo-cd \
   --set "configs.params.server\.insecure=true" \
   --wait
 
-echo "==> Registering Bitnami Helm repository"
-kubectl apply -f - <<'EOF'
-apiVersion: v1
-kind: Secret
-metadata:
-  name: bitnami-repo
-  namespace: argocd
-  labels:
-    argocd.argoproj.io/secret-type: repository
-type: Opaque
-stringData:
-  type: helm
-  name: bitnami
-  url: https://charts.bitnami.com/bitnami
-EOF
-
 echo "==> Applying root Applications"
 kubectl apply -f "${REPO_ROOT}/gitops/root-dev.yaml"
 kubectl apply -f "${REPO_ROOT}/gitops/root-staging.yaml"

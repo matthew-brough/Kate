@@ -1,4 +1,4 @@
-.PHONY: help cluster-up cluster-down dev test lint lock build
+.PHONY: help cluster-up cluster-down cold-start dev test lint lock build
 
 REGISTRY    := registry.localhost:5001
 CLUSTER     := kate
@@ -28,6 +28,9 @@ argocd-up: ## Install ArgoCD and apply root app-of-apps (run once after cluster-
 
 obs-up: ## Install kube-prometheus-stack, Loki, Promtail, Tempo, OTel Collector
 	@bash infra/observability/bootstrap.sh
+
+cold-start: cluster-up keda-up argocd-up obs-up ## Full cold-start: cluster + KEDA + ArgoCD + observability, then `tilt up`
+	tilt up
 
 # ── Dev loop ─────────────────────────────────────────────────────────────────
 
@@ -99,13 +102,6 @@ dashboards: ## Compile Jsonnet dashboards and apply as Grafana ConfigMaps (requi
 	    --dry-run=client -o yaml \
 	  | kubectl label --local -f - grafana_dashboard=1 -o yaml \
 	  | kubectl apply -f -; \
-	done
-
-helm-deps: ## Update Helm chart dependencies
-	@for chart in charts/*/.; do \
-	  name=$$(basename $$chart); \
-	  [ "$$name" = "_template" ] && continue; \
-	  helm dependency update $$chart; \
 	done
 
 .DEFAULT_GOAL := help

@@ -10,9 +10,3 @@ keywords:
   - fastapi
 maintainers:
   - name: matthew-brough
-
-dependencies:
-  - name: postgresql
-    version: "16.x.x"
-    repository: "https://charts.bitnami.com/bitnami"
-    condition: postgresql.enabled
