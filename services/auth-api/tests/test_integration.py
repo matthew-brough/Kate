@@ -64,13 +64,14 @@ async def pg_client(pg_engine: AsyncEngine) -> AsyncGenerator[AsyncClient]:
 
 async def test_pg_register_and_login(pg_client: AsyncClient) -> None:
     r = await pg_client.post(
-        "/register", json={"email": "integ@example.com", "password": "s3cret!"}
+        "/auth/register",
+        json={"username": "integ", "email": "integ@example.com", "password": "s3cret!!"},
     )
     assert r.status_code == 201
 
     r = await pg_client.post(
-        "/token",
-        data={"username": "integ@example.com", "password": "s3cret!"},
+        "/auth/token",
+        data={"username": "integ", "password": "s3cret!!"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert r.status_code == 200
@@ -79,31 +80,37 @@ async def test_pg_register_and_login(pg_client: AsyncClient) -> None:
 
 
 async def test_pg_duplicate_email_rejected(pg_client: AsyncClient) -> None:
-    payload = {"email": "dup@example.com", "password": "pass1234"}
-    await pg_client.post("/register", json=payload)
-    r = await pg_client.post("/register", json=payload)
+    payload = {"username": "dupuser", "email": "dup@example.com", "password": "pass1234"}
+    await pg_client.post("/auth/register", json=payload)
+    r = await pg_client.post("/auth/register", json=payload)
     assert r.status_code == 409
 
 
 async def test_pg_verify_token(pg_client: AsyncClient) -> None:
-    await pg_client.post("/register", json={"email": "verify@example.com", "password": "pass1234"})
+    await pg_client.post(
+        "/auth/register",
+        json={"username": "verify", "email": "verify@example.com", "password": "pass1234"},
+    )
     token_r = await pg_client.post(
-        "/token",
-        data={"username": "verify@example.com", "password": "pass1234"},
+        "/auth/token",
+        data={"username": "verify", "password": "pass1234"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     token = token_r.json()["access_token"]
 
-    r = await pg_client.get("/verify", headers={"Authorization": f"Bearer {token}"})
+    r = await pg_client.get("/auth/verify", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
-    assert r.json()["email"] == "verify@example.com"
+    assert r.json()["username"] == "verify"
 
 
 async def test_pg_wrong_password_rejected(pg_client: AsyncClient) -> None:
-    await pg_client.post("/register", json={"email": "wrong@example.com", "password": "correct"})
+    await pg_client.post(
+        "/auth/register",
+        json={"username": "wronguser", "email": "wrong@example.com", "password": "correct1"},
+    )
     r = await pg_client.post(
-        "/token",
-        data={"username": "wrong@example.com", "password": "incorrect"},
+        "/auth/token",
+        data={"username": "wronguser", "password": "incorrect"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert r.status_code == 401
