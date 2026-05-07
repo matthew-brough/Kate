@@ -16,8 +16,8 @@ env:
   APP_ENV: local
   APP_LOG_LEVEL: INFO
   APP_OTLP_ENABLED: "false"
-  # Constructed from postgresql sub-chart service name.
-  APP_DATABASE_URL: "postgresql+asyncpg://orders:orders@orders-api-postgresql:5432/orders"
+  # APP_DATABASE_URL is injected from the postgres Secret when postgresql.enabled.
+  # When postgresql.enabled=false (e.g. external DB), set APP_DATABASE_URL here.
 
 resources:
   requests:
@@ -74,8 +74,14 @@ postgresql:
     pullPolicy: IfNotPresent
   auth:
     username: orders
-    password: orders
+    # password has no default — pass via --set postgresql.auth.password=...
+    # (Tilt sources from APP_ORDERS_DB_PASSWORD in .env). Template fails fast.
+    password: ""
     database: orders
+  persistence:
+    enabled: false
+    size: 1Gi
+    storageClass: ""
   resources:
     requests:
       cpu: 50m

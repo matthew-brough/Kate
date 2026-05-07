@@ -20,8 +20,9 @@ env:
   APP_ENV: local
   APP_LOG_LEVEL: INFO
   APP_OTLP_ENABLED: "false"
-  APP_DATABASE_URL: "postgresql+asyncpg://auth:auth@auth-api-postgresql:5432/auth"
   APP_JWT_EXPIRE_MINUTES: "60"
+  # APP_DATABASE_URL is injected from the postgres Secret when postgresql.enabled.
+  # When postgresql.enabled=false (e.g. external DB), set APP_DATABASE_URL here.
 
 resources:
   requests:
@@ -77,8 +78,16 @@ postgresql:
     pullPolicy: IfNotPresent
   auth:
     username: auth
-    password: auth
+    # password has no default — pass via --set postgresql.auth.password=...
+    # (Tilt sources from APP_AUTH_DB_PASSWORD in .env). Template fails fast.
+    password: ""
     database: auth
+  persistence:
+    # Default off so dev-loop pod restarts are fast. Flip to true for any
+    # environment where data loss on restart is unacceptable.
+    enabled: false
+    size: 1Gi
+    storageClass: ""
   resources:
     requests:
       cpu: 50m

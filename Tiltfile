@@ -36,6 +36,12 @@ def _require(env, key):
 
 _ENV = _load_env(".env")
 JWT_SECRET = _require(_ENV, "APP_JWT_SECRET")
+DB_PASSWORDS = {
+    "auth-api":   _require(_ENV, "APP_AUTH_DB_PASSWORD"),
+    "orders-api": _require(_ENV, "APP_ORDERS_DB_PASSWORD"),
+    "report-api": _require(_ENV, "APP_REPORT_DB_PASSWORD"),
+}
+CHAOS_TOKEN = _require(_ENV, "CHAOS_TOKEN")
 
 # Charts that need jwtSecret injected from .env (auth-api and gateway must agree
 # on the value or token validation silently fails).
@@ -61,6 +67,10 @@ def svc(name, port_forward=None, live_sync=True):
     ]
     if _NEEDS_JWT.get(name):
         set_args.append("jwtSecret=" + JWT_SECRET)
+    if name in DB_PASSWORDS:
+        set_args.append("postgresql.auth.password=" + DB_PASSWORDS[name])
+    if name == "chaos-portal":
+        set_args.append("chaosToken=" + CHAOS_TOKEN)
     k8s_yaml(
         helm(
             "charts/" + name,

@@ -16,8 +16,9 @@ env:
   APP_ENV: local
   APP_LOG_LEVEL: INFO
   APP_OTLP_ENABLED: "false"
-  APP_DATABASE_URL: "postgresql+asyncpg://reports:reports@report-api-postgresql:5432/reports"
   APP_CELERY_BROKER_URL: "redis://redis-master:6379/0"
+  # APP_DATABASE_URL is injected from the postgres Secret when postgresql.enabled.
+  # When postgresql.enabled=false (e.g. external DB), set APP_DATABASE_URL here.
 
 resources:
   requests:
@@ -73,8 +74,14 @@ postgresql:
     pullPolicy: IfNotPresent
   auth:
     username: reports
-    password: reports
+    # password has no default — pass via --set postgresql.auth.password=...
+    # (Tilt sources from APP_REPORT_DB_PASSWORD in .env). Template fails fast.
+    password: ""
     database: reports
+  persistence:
+    enabled: false
+    size: 1Gi
+    storageClass: ""
   resources:
     requests:
       cpu: 50m

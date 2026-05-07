@@ -11,9 +11,15 @@ fullnameOverride: ""
 env:
   APP_ENV: local
   APP_LOG_LEVEL: INFO
-  # Same DB as report-api — worker writes results to the reports table.
-  APP_DATABASE_URL: "postgresql+asyncpg://reports:reports@report-api-postgresql:5432/reports"
   APP_CELERY_BROKER_URL: "redis://redis-master:6379/0"
+
+# Worker shares report-api's DB. APP_DATABASE_URL is read from a Secret created
+# by the report-api chart (default name follows the {fullname}-postgresql
+# convention). Disable + supply APP_DATABASE_URL via env above for external DB.
+databaseSecret:
+  enabled: true
+  name: report-api-postgresql
+  key: database-url
 
 resources:
   requests:

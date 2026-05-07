@@ -16,6 +16,24 @@ spec:
   selector:
     app.kubernetes.io/name: {{ include "auth-api.fullname" . }}-postgresql
     app.kubernetes.io/component: database
+{{- if .Values.postgresql.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "auth-api.fullname" . }}-postgresql
+  labels:
+    app.kubernetes.io/name: {{ include "auth-api.fullname" . }}-postgresql
+    app.kubernetes.io/component: database
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.postgresql.persistence.size | quote }}
+  {{- with .Values.postgresql.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -38,6 +56,13 @@ spec:
         app.kubernetes.io/name: {{ include "auth-api.fullname" . }}-postgresql
         app.kubernetes.io/component: database
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
           image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
@@ -49,7 +74,10 @@ spec:
             - name: POSTGRES_USER
               value: {{ .Values.postgresql.auth.username | quote }}
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgresql.auth.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "auth-api.fullname" . }}-postgresql
+                  key: password
             - name: POSTGRES_DB
               value: {{ .Values.postgresql.auth.database | quote }}
             - name: PGDATA
@@ -75,10 +103,20 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
           resources: {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
       volumes:
         - name: data
+          {{- if .Values.postgresql.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "auth-api.fullname" . }}-postgresql
+          {{- else }}
           emptyDir: {}
+          {{- end }}
 {{- end }}

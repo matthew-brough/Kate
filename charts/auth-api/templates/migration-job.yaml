@@ -43,6 +43,13 @@ spec:
             - name: {{ $key }}
               value: {{ $val | quote }}
             {{- end }}
+            {{- if .Values.postgresql.enabled }}
+            - name: APP_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "auth-api.fullname" . }}-postgresql
+                  key: database-url
+            {{- end }}
             - name: APP_JWT_SECRET
               valueFrom:
                 secretKeyRef:

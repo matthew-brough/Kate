@@ -22,10 +22,4 @@ env:
 
 postgresql:
   enabled: true
-  auth:
-    username: reports
-    password: reports
-    database: reports
-  primary:
-    persistence:
-      enabled: false
+  # password is sourced from APP_REPORT_DB_PASSWORD in .env via Tilt --set.
