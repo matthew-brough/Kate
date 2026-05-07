@@ -1,8 +1,8 @@
 import hmac
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from collections.abc import AsyncIterator
 
 import structlog
 from starlette.applications import Starlette
