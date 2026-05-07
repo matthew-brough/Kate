@@ -6,16 +6,19 @@ REGISTRY = "registry.localhost:5001"
 NAMESPACE = "platform"
 
 
-def svc(name, port_forward=None):
-    """Register a FastAPI service: build → deploy → optional port-forward."""
-    docker_build(
-        REGISTRY + "/" + name,
-        "services/" + name,
-        target = "dev",
-        live_update = [
+def svc(name, port_forward=None, live_sync=True):
+    """Register a FastAPI service: build → deploy → optional port-forward.
+
+    `live_sync=False` for services whose CMD lacks `--reload` (e.g. chaos-portal,
+    where uvicorn's reloader misbehaves). Tilt does a full image rebuild on file
+    change, which picks up the new code via a fresh pod.
+    """
+    build_kwargs = {"target": "dev"}
+    if live_sync:
+        build_kwargs["live_update"] = [
             sync("services/" + name + "/src/app", "/app/src/app"),
-        ],
-    )
+        ]
+    docker_build(REGISTRY + "/" + name, "services/" + name, **build_kwargs)
     k8s_yaml(
         helm(
             "charts/" + name,
@@ -28,18 +31,25 @@ def svc(name, port_forward=None):
             ],
         )
     )
-    fwds = [port_forward + ":8000"] if port_forward else []
+    fwds = [str(port_forward) + ":8000"] if port_forward else []
     k8s_resource(name, port_forwards=fwds, labels=["services"])
 
 
+def svc_with_db(name, port_forward=None):
+    """Register a FastAPI service whose chart bundles a postgres sub-deployment."""
+    svc(name, port_forward=port_forward)
+    k8s_resource(name + "-postgresql", labels=["postgres"])
+
+
 # ── orders-api ────────────────────────────────────────────────────────────────
-svc("orders-api", port_forward=8000)
+svc_with_db("orders-api", port_forward=8000)
 
 # ── auth-api ──────────────────────────────────────────────────────────────────
-svc("auth-api", port_forward=8001)
+svc_with_db("auth-api", port_forward=8001)
 
 # ── report-api ────────────────────────────────────────────────────────────────
 svc("report-api", port_forward=8002)
+k8s_resource("report-api-postgresql", labels=["postgres"])
 
 # ── gateway (main ingress, also exposed via Traefik at kate.localhost) ────────
 svc("gateway", port_forward=8080)
@@ -76,7 +86,7 @@ k8s_yaml(
 k8s_resource("redis-master", port_forwards=["6379:6379"], labels=["infra"])
 
 # ── chaos-portal (Starlette + HTMX, pod kill + network partition) ────────────
-svc("chaos-portal", port_forward=8090)
+svc("chaos-portal", port_forward=8090, live_sync=False)
 
 # ── loadgen (Locust headless, ~5 RPS continuous traffic) ──────────────────────
 docker_build(
