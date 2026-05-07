@@ -28,6 +28,8 @@ pytestmark = pytest.mark.skipif(
     reason="set INTEGRATION=1 to run integration tests (requires Docker)",
 )
 
+_USER_ID = "user-integ"
+
 
 @pytest.fixture(scope="module")
 async def pg_engine() -> AsyncGenerator[AsyncEngine]:
@@ -57,7 +59,11 @@ async def pg_client(pg_engine: AsyncEngine) -> AsyncGenerator[AsyncClient]:
     instance = create_app()
     instance.dependency_overrides[get_session] = _get_session
 
-    async with AsyncClient(transport=ASGITransport(app=instance), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=instance),
+        base_url="http://test",
+        headers={"X-User-Id": _USER_ID},
+    ) as c:
         yield c
 
     instance.dependency_overrides.clear()
@@ -69,9 +75,7 @@ async def test_pg_create_report_persisted(pg_client: AsyncClient) -> None:
     mock_celery.send_task.return_value = MagicMock(id="task-integ-001")
 
     with patch("app.routers.reports.celery_app", mock_celery):
-        r = await pg_client.post(
-            "/reports", json={"user_id": "user-integ", "report_type": "summary"}
-        )
+        r = await pg_client.post("/reports")
     assert r.status_code == 202
     report_id = r.json()["id"]
     assert report_id
@@ -82,11 +86,7 @@ async def test_pg_poll_returns_pending(pg_client: AsyncClient) -> None:
     mock_celery.send_task.return_value = MagicMock(id="task-integ-002")
 
     with patch("app.routers.reports.celery_app", mock_celery):
-        created = (
-            await pg_client.post(
-                "/reports", json={"user_id": "user-integ", "report_type": "detail"}
-            )
-        ).json()
+        created = (await pg_client.post("/reports")).json()
 
     r = await pg_client.get(f"/reports/{created['id']}")
     assert r.status_code == 200
