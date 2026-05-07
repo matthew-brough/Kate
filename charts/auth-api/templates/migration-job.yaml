@@ -43,13 +43,11 @@ spec:
             - name: {{ $key }}
               value: {{ $val | quote }}
             {{- end }}
-            {{- if .Values.jwtSecret }}
             - name: APP_JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ include "auth-api.fullname" . }}-jwt
                   key: jwt-secret
-            {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

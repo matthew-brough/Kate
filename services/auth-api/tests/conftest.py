@@ -9,6 +9,10 @@ Integration tests (test_*_integration.py) are gated behind INTEGRATION=1
 and use testcontainers[postgres].
 """
 
+import os
+
+os.environ.setdefault("APP_JWT_SECRET", "test-secret")
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 

@@ -6,6 +6,42 @@ REGISTRY = "registry.localhost:5001"
 NAMESPACE = "platform"
 
 
+def _load_env(path):
+    """Parse a KEY=VALUE .env file. Fail clearly if missing or malformed.
+
+    The chart's `required` template guards reject empty values at install time,
+    so we only need to surface a friendly message about the missing source file.
+    """
+    if not os.path.exists(path):
+        fail(
+            ".env not found at " + path + " — copy .env.example to .env and fill it in"
+        )
+    env = {}
+    for line in str(read_file(path)).split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            fail(".env: expected KEY=VALUE, got: " + line)
+        k, _, v = line.partition("=")
+        env[k.strip()] = v.strip().strip('"').strip("'")
+    return env
+
+
+def _require(env, key):
+    if not env.get(key):
+        fail(".env: required key " + key + " is missing or empty")
+    return env[key]
+
+
+_ENV = _load_env(".env")
+JWT_SECRET = _require(_ENV, "APP_JWT_SECRET")
+
+# Charts that need jwtSecret injected from .env (auth-api and gateway must agree
+# on the value or token validation silently fails).
+_NEEDS_JWT = {"auth-api": True, "gateway": True}
+
+
 def svc(name, port_forward=None, live_sync=True):
     """Register a FastAPI service: build → deploy → optional port-forward.
 
@@ -19,16 +55,19 @@ def svc(name, port_forward=None, live_sync=True):
             sync("services/" + name + "/src/app", "/app/src/app"),
         ]
     docker_build(REGISTRY + "/" + name, "services/" + name, **build_kwargs)
+    set_args = [
+        "image.repository=" + REGISTRY + "/" + name,
+        "image.tag=latest",
+    ]
+    if _NEEDS_JWT.get(name):
+        set_args.append("jwtSecret=" + JWT_SECRET)
     k8s_yaml(
         helm(
             "charts/" + name,
             name      = name,
             namespace = NAMESPACE,
             values    = ["charts/" + name + "/ci/dev-values.yaml"],
-            set       = [
-                "image.repository=" + REGISTRY + "/" + name,
-                "image.tag=latest",
-            ],
+            set       = set_args,
         )
     )
     fwds = [str(port_forward) + ":8000"] if port_forward else []

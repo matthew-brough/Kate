@@ -12,8 +12,9 @@ service:
   type: ClusterIP
   port: 8000
 
-# JWT secret is injected via a k8s Secret — override this in production with a strong value.
-jwtSecret: "dev-secret-change-in-production"
+# jwtSecret has no default. Pass it via `--set jwtSecret=...` — must match
+# auth-api's value or token validation will silently fail. Tilt sources from
+# repo-root .env. Templates use {{ required }} so install fails fast.
 
 env:
   APP_ENV: local

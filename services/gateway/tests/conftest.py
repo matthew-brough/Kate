@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault("APP_JWT_SECRET", "test-secret")
+
 from collections.abc import AsyncGenerator, Generator
 from datetime import UTC
 

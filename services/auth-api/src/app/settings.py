@@ -1,4 +1,4 @@
-from pydantic import PostgresDsn
+from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,7 +22,10 @@ class Settings(BaseSettings):
 
     database_url: PostgresDsn = PostgresDsn("postgresql+asyncpg://auth:auth@localhost:5432/auth")
 
-    jwt_secret: str = "dev-secret-change-in-production!"
+    # No usable default — empty value triggers min_length=1 on validate_default,
+    # so a missing APP_JWT_SECRET fails at Settings() construction with a clear
+    # pydantic ValidationError. Pyright sees a regular str default.
+    jwt_secret: str = Field(default="", min_length=1, validate_default=True)
     jwt_expire_minutes: int = 60
     jwt_issuer: str = "kate-auth-api"
     jwt_audience: str = "kate-platform"

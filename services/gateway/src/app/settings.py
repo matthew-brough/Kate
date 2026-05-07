@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,8 +25,10 @@ class Settings(BaseSettings):
     orders_api_url: str = "http://orders-api:8000"
     report_api_url: str = "http://report-api:8000"
 
-    # Must match auth-api's jwt_secret, jwt_issuer, jwt_audience
-    jwt_secret: str = "dev-secret-change-in-production"
+    # Must match auth-api's jwt_secret, jwt_issuer, jwt_audience.
+    # No usable default — empty value triggers min_length=1 on validate_default,
+    # so a missing APP_JWT_SECRET fails at Settings() construction.
+    jwt_secret: str = Field(default="", min_length=1, validate_default=True)
     jwt_issuer: str = "kate-auth-api"
     jwt_audience: str = "kate-platform"
 
