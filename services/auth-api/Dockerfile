@@ -24,6 +24,8 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock* ./
 COPY src/ ./src/
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 
 RUN uv sync
 

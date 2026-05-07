@@ -17,6 +17,22 @@ spec:
         runAsUser: 1001
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ include "auth-api.fullname" . }}-postgresql -p 5432 -U {{ .Values.postgresql.auth.username | quote }}; do
+                echo "waiting for postgres..."; sleep 2;
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
       containers:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ include "auth-api.imageTag" . }}"
