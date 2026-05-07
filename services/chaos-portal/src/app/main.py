@@ -84,7 +84,14 @@ async def pod_list(request: Request) -> Response:
 
 
 async def kill_pod(request: Request) -> Response:
+    # The token gates "can call this API" but doesn't constrain *what* — without
+    # a server-side allowlist a token-holder could delete any pod in the
+    # namespace (chaos-portal itself included). k8s pod names are
+    # <deployment>-<rs>-<pod>, so prefix-match against `<service>-` is the
+    # right shape for the allowlist.
     name = request.path_params["name"]
+    if not any(name.startswith(s + "-") for s in SERVICES):
+        return Response(f"pod {name!r} not in SERVICES allowlist", status_code=400)
     k8s.delete_pod(NAMESPACE, name)
     log.info("pod_killed", pod=name, namespace=NAMESPACE)
     pods = k8s.list_pods(NAMESPACE)
@@ -105,6 +112,8 @@ async def partition_list(request: Request) -> Response:
 
 async def toggle_partition(request: Request) -> Response:
     service = request.path_params["service"]
+    if service not in SERVICES:
+        return Response(f"service {service!r} not in SERVICES allowlist", status_code=400)
     active = k8s.toggle_partition(NAMESPACE, service)
     log.info("partition_toggled", service=service, active=active, namespace=NAMESPACE)
     partitions = k8s.list_partitions(NAMESPACE)

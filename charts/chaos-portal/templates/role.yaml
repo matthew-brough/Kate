@@ -1,4 +1,5 @@
 {{- if .Values.rbac.create }}
+{{- $services := splitList "," (default "" .Values.env.CHAOS_SERVICES) }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -6,10 +7,23 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels: {{- include "chaos-portal.labels" . | nindent 4 }}
 rules:
+  # Pod list/get is needed for the UI; delete can't be resourceName-scoped
+  # because pod names are dynamic. The server-side allowlist in main.py
+  # (kill_pod prefix-matches name against SERVICES) is the actual control.
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list", "get", "delete"]
+  # NetworkPolicy list/get must be unscoped (UI shows all). Patch is scoped
+  # to the deterministic <service>-allow-ingress names that toggle_partition
+  # operates on.
   - apiGroups: ["networking.k8s.io"]
     resources: ["networkpolicies"]
-    verbs: ["list", "get", "patch"]
+    verbs: ["list", "get"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    resourceNames:
+      {{- range $services }}
+      - {{ printf "%s-allow-ingress" (trim .) | quote }}
+      {{- end }}
+    verbs: ["patch"]
 {{- end }}

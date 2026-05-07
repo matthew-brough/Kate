@@ -15,3 +15,9 @@ def client() -> TestClient:
         raise_server_exceptions=False,
         headers={"X-Chaos-Token": CHAOS_TOKEN},
     )
+
+
+@pytest.fixture
+def unauth_client() -> TestClient:
+    """Same app, no X-Chaos-Token header — for negative-path TokenAuthMiddleware tests."""
+    return TestClient(app, raise_server_exceptions=False)

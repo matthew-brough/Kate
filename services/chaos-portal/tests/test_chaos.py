@@ -77,3 +77,40 @@ def test_health(client: TestClient) -> None:
 
 def test_ready(client: TestClient) -> None:
     assert client.get("/ready").status_code == 200
+
+
+@patch("app.main.k8s")
+def test_kill_pod_rejects_outside_allowlist(mock_k8s: MagicMock, client: TestClient) -> None:
+    resp = client.post("/pods/chaos-portal-abc123/kill")
+    assert resp.status_code == 400
+    assert "allowlist" in resp.text
+    mock_k8s.delete_pod.assert_not_called()
+
+
+@patch("app.main.k8s")
+def test_toggle_partition_rejects_outside_allowlist(
+    mock_k8s: MagicMock, client: TestClient
+) -> None:
+    resp = client.post("/partitions/gateway/toggle")
+    assert resp.status_code == 400
+    assert "allowlist" in resp.text
+    mock_k8s.toggle_partition.assert_not_called()
+
+
+def test_unauth_request_rejected(unauth_client: TestClient) -> None:
+    """TokenAuthMiddleware: missing X-Chaos-Token → 401 on protected routes."""
+    assert unauth_client.get("/").status_code == 401
+    assert unauth_client.get("/pods").status_code == 401
+    assert unauth_client.post("/pods/orders-api-abc/kill").status_code == 401
+    assert unauth_client.post("/partitions/orders-api/toggle").status_code == 401
+
+
+def test_wrong_token_rejected(unauth_client: TestClient) -> None:
+    unauth_client.headers["X-Chaos-Token"] = "not-the-right-token"
+    assert unauth_client.get("/").status_code == 401
+
+
+def test_health_endpoints_open(unauth_client: TestClient) -> None:
+    """/health and /ready bypass TokenAuthMiddleware so kubelet probes work."""
+    assert unauth_client.get("/health").status_code == 200
+    assert unauth_client.get("/ready").status_code == 200

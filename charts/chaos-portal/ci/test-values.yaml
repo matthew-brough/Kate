@@ -1,0 +1,2 @@
+# helm lint / ct lint values — dummy secret keeps the {{ required }} guard happy.
+chaosToken: "test-chaos-token"

@@ -33,6 +33,14 @@ jobs:
           done
 
       - name: kubeconform — validate rendered templates
+        # CI-only literals for charts that {{ required }} secret values. Helm
+        # silently drops --set flags for values not defined in a given chart,
+        # so one set works for all. These are not real secrets.
+        env:
+          CI_SET_FLAGS: >-
+            --set jwtSecret=ci-jwt-secret
+            --set chaosToken=ci-chaos-token
+            --set postgresql.auth.password=ci-pg-password
         run: |
           for chart in charts/*/; do
             name=$(basename "$chart")
@@ -41,6 +49,7 @@ jobs:
             echo "==> kubeconform $name"
             helm template "$name" "$chart" \
               ${values_file:+-f "$values_file"} \
+              $CI_SET_FLAGS \
               | kubeconform -strict -ignore-missing-schemas -
           done
 

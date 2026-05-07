@@ -12,6 +12,10 @@ service:
   type: ClusterIP
   port: 8000
 
+# chaosToken has no default. Pass via --set chaosToken=... — Tilt sources from
+# CHAOS_TOKEN in repo-root .env. The Secret template uses {{ required }} so
+# install fails fast. The app also refuses to start if CHAOS_TOKEN is empty.
+
 env:
   CHAOS_NAMESPACE: "platform"
   CHAOS_SERVICES: "orders-api,auth-api,report-api,worker"

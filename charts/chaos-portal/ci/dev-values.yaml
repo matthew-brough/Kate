@@ -4,4 +4,4 @@ image:
 env:
   CHAOS_NAMESPACE: "platform"
   CHAOS_SERVICES: "orders-api,auth-api,report-api,worker"
-  CHAOS_TOKEN: "dev-chaos-secret-change-in-production"
+# chaosToken sourced from CHAOS_TOKEN in .env via Tilt --set.
