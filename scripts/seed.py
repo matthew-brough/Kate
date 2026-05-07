@@ -98,7 +98,6 @@ def seed_orders(client: httpx.Client, cfg: SeedConfig, tokens: list[str]) -> Non
             f"{cfg.gateway}/api/orders",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "user_id": str(fake.uuid4()),
                 "product_id": random.choice(PRODUCTS),
                 "quantity": random.randint(1, 10),
                 "unit_price": round(random.uniform(5.0, 999.99), 2),

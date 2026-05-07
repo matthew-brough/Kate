@@ -6,10 +6,6 @@ from pydantic import BaseModel, ConfigDict
 from app.models import ReportStatus
 
 
-class ReportCreate(BaseModel):
-    pass  # user_id is injected from JWT via X-User-Id header
-
-
 class ReportRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
