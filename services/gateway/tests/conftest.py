@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from datetime import UTC
 
 import httpx as _httpx
@@ -39,6 +39,6 @@ def valid_token() -> str:
 
 
 @pytest.fixture
-def mock_upstream() -> respx.MockRouter:
+def mock_upstream() -> Generator[respx.MockRouter]:
     with respx.mock(assert_all_called=False) as mock:
         yield mock
