@@ -36,6 +36,13 @@ grafana:
         lokiSearch:
           datasourceUid: loki
 
+prometheusOperator:
+  admissionWebhooks:
+    patch:
+      enabled: true
+    certManager:
+      enabled: false
+
 prometheus:
   prometheusSpec:
     # Scrape ServiceMonitors from all namespaces (picks up platform/* monitors)

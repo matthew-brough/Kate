@@ -19,7 +19,7 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
   --namespace observability --create-namespace \
   --version "${PROM_CHART_VERSION}" \
   -f "${VALUES}/prometheus-stack.yaml" \
-  --wait --timeout 5m
+  --wait --timeout 15m
 
 helm upgrade --install loki grafana/loki \
   --namespace observability \
