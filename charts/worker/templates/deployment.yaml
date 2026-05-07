@@ -19,6 +19,7 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
+        fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
       terminationGracePeriodSeconds: 60
@@ -38,3 +39,9 @@ spec:
             capabilities:
               drop:
                 - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

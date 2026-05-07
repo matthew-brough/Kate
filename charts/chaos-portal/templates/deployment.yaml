@@ -13,10 +13,7 @@ spec:
     spec:
       serviceAccountName: {{ include "chaos-portal.serviceAccountName" . }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1001
-        seccompProfile:
-          type: RuntimeDefault
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: chaos-portal
           image: "{{ .Values.image.repository }}:{{ include "chaos-portal.imageTag" . }}"
