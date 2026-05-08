@@ -11,7 +11,7 @@ fullnameOverride: ""
 # Locust reads all LOCUST_* env vars automatically.
 # Omit LOCUST_RUN_TIME to run indefinitely.
 env:
-  LOCUST_HOST: "http://gateway:8000"
+  LOCUST_HOST: "http://gateway-headless:8000"
   LOCUST_USERS: "5"
   LOCUST_SPAWN_RATE: "1"
   LOCUST_HEADLESS: "true"

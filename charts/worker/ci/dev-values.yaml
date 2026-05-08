@@ -8,6 +8,11 @@ pdb:
 networkPolicy:
   enabled: true
 
+env:
+  APP_CELERY_BROKER_URL: "redis://redis-master-headless:6379/0"
+
 # keda.enabled requires `make keda-up` first.
 # keda:
 #   enabled: true
+keda:
+  redisAddress: "redis-master-headless:6379"

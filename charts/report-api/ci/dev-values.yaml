@@ -19,6 +19,7 @@ serviceMonitor:
 env:
   APP_OTLP_ENABLED: "true"
   APP_OTLP_ENDPOINT: "otel-collector.observability.svc.cluster.local:4317"
+  APP_CELERY_BROKER_URL: "redis://redis-master-headless:6379/0"
 
 postgresql:
   enabled: true

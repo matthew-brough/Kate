@@ -19,3 +19,7 @@ serviceMonitor:
 env:
   APP_OTLP_ENABLED: "true"
   APP_OTLP_ENDPOINT: "otel-collector.observability.svc.cluster.local:4317"
+  APP_AUTH_API_URL: "http://auth-api-headless:8000"
+  APP_ORDERS_API_URL: "http://orders-api-headless:8000"
+  APP_REPORT_API_URL: "http://report-api-headless:8000"
+  APP_RATE_LIMIT_REDIS_URL: "redis://redis-master-headless:6379/0"

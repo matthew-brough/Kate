@@ -34,7 +34,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 CMD ["celery", "-A", "app.celery_app", "worker", \
      "--loglevel=debug", \
      "--concurrency=1", \
-     "--queues=default"]
+     "--queues=celery"]
 
 # ── Production ───────────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS production
@@ -54,4 +54,4 @@ USER appuser
 CMD ["celery", "-A", "app.celery_app", "worker", \
      "--loglevel=info", \
      "--concurrency=4", \
-     "--queues=default"]
+     "--queues=celery"]
