@@ -17,6 +17,10 @@ fake = Faker()
 PRODUCTS = [str(uuid.uuid4()) for _ in range(20)]
 REQUEST_TIMEOUT = 5
 AUTH_ATTEMPTS = 3
+ORDER_LIST_LABEL = "purchase list [GET]"
+ORDER_CREATE_LABEL = "purchase create [POST]"
+REPORT_CREATE_LABEL = "analytics create [POST]"
+REPORT_POLL_LABEL = "analytics poll [GET]"
 
 
 class PlatformUser(HttpUser):
@@ -77,7 +81,7 @@ class PlatformUser(HttpUser):
         self.client.get(
             "/api/orders",
             headers=self._auth(),
-            name="/api/orders [GET]",
+            name=ORDER_LIST_LABEL,
             timeout=REQUEST_TIMEOUT,
         )
 
@@ -93,7 +97,7 @@ class PlatformUser(HttpUser):
                 "quantity": random.randint(1, 5),
                 "unit_price": round(random.uniform(9.99, 199.99), 2),
             },
-            name="/api/orders [POST]",
+            name=ORDER_CREATE_LABEL,
             timeout=REQUEST_TIMEOUT,
         )
 
@@ -104,7 +108,7 @@ class PlatformUser(HttpUser):
         r = self.client.post(
             "/api/reports",
             headers=self._auth(),
-            name="/api/reports [POST]",
+            name=REPORT_CREATE_LABEL,
             timeout=REQUEST_TIMEOUT,
         )
         if r.status_code != 202:
@@ -116,7 +120,7 @@ class PlatformUser(HttpUser):
             poll = self.client.get(
                 f"/api/reports/{report_id}",
                 headers=self._auth(),
-                name="/api/reports/[id] [GET]",
+                name=REPORT_POLL_LABEL,
                 timeout=REQUEST_TIMEOUT,
             )
             if poll.json().get("status") in ("completed", "failed"):
