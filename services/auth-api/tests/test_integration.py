@@ -21,6 +21,8 @@ import app.db as _db_module
 from app.db import Base, get_session
 from app.main import create_app
 
+VALID_PASSWORD = "Str0ng!Passxx"
+
 pytestmark = pytest.mark.skipif(
     not os.getenv("INTEGRATION"),
     reason="set INTEGRATION=1 to run integration tests (requires Docker)",
@@ -65,13 +67,13 @@ async def pg_client(pg_engine: AsyncEngine) -> AsyncGenerator[AsyncClient]:
 async def test_pg_register_and_login(pg_client: AsyncClient) -> None:
     r = await pg_client.post(
         "/auth/register",
-        json={"username": "integ", "email": "integ@example.com", "password": "s3cret!!"},
+        json={"username": "Integ", "email": "Integ@Example.com", "password": VALID_PASSWORD},
     )
     assert r.status_code == 201
 
     r = await pg_client.post(
         "/auth/token",
-        data={"username": "integ", "password": "s3cret!!"},
+        data={"username": "integ", "password": VALID_PASSWORD},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert r.status_code == 200
@@ -80,7 +82,7 @@ async def test_pg_register_and_login(pg_client: AsyncClient) -> None:
 
 
 async def test_pg_duplicate_email_rejected(pg_client: AsyncClient) -> None:
-    payload = {"username": "dupuser", "email": "dup@example.com", "password": "pass1234"}
+    payload = {"username": "dupuser", "email": "dup@example.com", "password": VALID_PASSWORD}
     await pg_client.post("/auth/register", json=payload)
     r = await pg_client.post("/auth/register", json=payload)
     assert r.status_code == 409
@@ -89,7 +91,7 @@ async def test_pg_duplicate_email_rejected(pg_client: AsyncClient) -> None:
 async def test_pg_wrong_password_rejected(pg_client: AsyncClient) -> None:
     await pg_client.post(
         "/auth/register",
-        json={"username": "wronguser", "email": "wrong@example.com", "password": "correct1"},
+        json={"username": "wronguser", "email": "wrong@example.com", "password": VALID_PASSWORD},
     )
     r = await pg_client.post(
         "/auth/token",
