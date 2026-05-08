@@ -9,6 +9,7 @@ helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
 
 echo "==> Installing ArgoCD ${ARGOCD_CHART_VERSION} in namespace argocd"
+echo "==> Dev-only: configuring argocd-server with configs.params.server.insecure=true"
 helm upgrade --install argocd argo/argo-cd \
   --namespace argocd --create-namespace \
   --version "${ARGOCD_CHART_VERSION}" \
@@ -21,6 +22,4 @@ kubectl apply -f "${REPO_ROOT}/gitops/root-staging.yaml"
 
 echo ""
 echo "ArgoCD UI: kubectl port-forward svc/argocd-server -n argocd 8080:80"
-ARGOCD_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret \
-  -o jsonpath="{.data.password}" | base64 -d)
-echo "Initial admin password: ${ARGOCD_PASS}"
+echo "Initial admin password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
