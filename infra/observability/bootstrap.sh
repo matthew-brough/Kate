@@ -6,9 +6,30 @@ LOKI_CHART_VERSION="${LOKI_CHART_VERSION:-6.6.4}"
 PROMTAIL_CHART_VERSION="${PROMTAIL_CHART_VERSION:-6.16.5}"
 TEMPO_CHART_VERSION="${TEMPO_CHART_VERSION:-1.10.3}"
 OTEL_CHART_VERSION="${OTEL_CHART_VERSION:-0.111.0}"
+GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
+LOKI_TENANT_ID="kate"
+
+: "${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD before installing observability.}"
+: "${LOKI_TENANT_PASSWORD:?Set LOKI_TENANT_PASSWORD before installing observability.}"
 
 REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 VALUES="${REPO_ROOT}/infra/observability/values"
+
+kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n observability create secret generic grafana-admin \
+  --from-literal=admin-user="${GRAFANA_ADMIN_USER}" \
+  --from-literal=admin-password="${GRAFANA_ADMIN_PASSWORD}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n observability create secret generic loki-tenant-auth \
+  --from-literal=LOKI_TENANT_PASSWORD="${LOKI_TENANT_PASSWORD}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+LOKI_HTPASSWD_HASH="$(openssl passwd -apr1 "${LOKI_TENANT_PASSWORD}")"
+kubectl -n observability create secret generic loki-gateway-basic-auth \
+  --from-literal=.htpasswd="${LOKI_TENANT_ID}:${LOKI_HTPASSWD_HASH}" \
+  --dry-run=client -o yaml | kubectl apply -f -
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo add grafana https://grafana.github.io/helm-charts
@@ -16,7 +37,7 @@ helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm
 helm repo update
 
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-  --namespace observability --create-namespace \
+  --namespace observability \
   --version "${PROM_CHART_VERSION}" \
   -f "${VALUES}/prometheus-stack.yaml" \
   --wait --timeout 15m
@@ -46,12 +67,13 @@ helm upgrade --install otel-collector open-telemetry/opentelemetry-collector \
   --wait
 
 kubectl apply -f "${REPO_ROOT}/infra/observability/dashboards/"
+kubectl apply -f "${REPO_ROOT}/infra/observability/networkpolicies/"
 
 echo ""
 echo "Observability stack installed in namespace: observability"
 echo ""
 echo "Access:"
 echo "  Grafana:    kubectl -n observability port-forward svc/kube-prometheus-stack-grafana 3000:80"
-echo "              http://localhost:3000  (admin / admin)"
+echo "              http://localhost:3000  (${GRAFANA_ADMIN_USER} / from grafana-admin secret)"
 echo "  Prometheus: kubectl -n observability port-forward svc/kube-prometheus-stack-prometheus 9090:9090"
 echo "              http://localhost:9090"

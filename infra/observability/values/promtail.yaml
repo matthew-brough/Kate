@@ -1,6 +1,10 @@
 config:
   clients:
-    - url: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+    - url: http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push
+      tenant_id: kate
+      basic_auth:
+        username: kate
+        password_file: /etc/loki-auth/LOKI_TENANT_PASSWORD
   snippets:
     pipelineStages:
       - cri: {}
@@ -20,3 +24,13 @@ resources:
     memory: 64Mi
   limits:
     memory: 128Mi
+
+extraVolumes:
+  - name: loki-auth
+    secret:
+      secretName: loki-tenant-auth
+
+extraVolumeMounts:
+  - name: loki-auth
+    mountPath: /etc/loki-auth
+    readOnly: true

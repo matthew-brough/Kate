@@ -1,5 +1,9 @@
 grafana:
-  adminPassword: admin
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  envFromSecret: loki-tenant-auth
   service:
     type: ClusterIP
   sidecar:
@@ -12,13 +16,18 @@ grafana:
     - name: Loki
       type: loki
       uid: loki
-      url: http://loki.observability.svc.cluster.local:3100
+      url: http://loki-gateway.observability.svc.cluster.local
+      access: proxy
+      basicAuth: true
+      basicAuthUser: kate
       jsonData:
         derivedFields:
           - name: TraceID
             matcherRegex: '"trace_id":"([0-9a-f]{32})"'
             url: "${__value.raw}"
             datasourceUid: tempo
+      secureJsonData:
+        basicAuthPassword: ${LOKI_TENANT_PASSWORD}
     - name: Tempo
       type: tempo
       uid: tempo
@@ -58,7 +67,14 @@ prometheus:
         memory: 1Gi
 
 alertmanager:
-  enabled: false
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
 
 nodeExporter:
   enabled: true

@@ -1,5 +1,5 @@
 loki:
-  auth_enabled: false
+  auth_enabled: true
   commonConfig:
     replication_factor: 1
   storage:
@@ -26,6 +26,14 @@ singleBinary:
       memory: 256Mi
     limits:
       memory: 512Mi
+
+gateway:
+  enabled: true
+  basicAuth:
+    enabled: true
+    existingSecret: loki-gateway-basic-auth
+  nginxConfig:
+    httpSnippet: proxy_set_header X-Scope-OrgID $remote_user;
 
 # Disable scalable-mode components
 backend:

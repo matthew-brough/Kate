@@ -38,6 +38,8 @@ make cluster-up
 tilt up
 
 # 3. Install observability stack (separate terminal, one-time)
+GRAFANA_ADMIN_PASSWORD="$(openssl rand -base64 24)" \
+LOKI_TENANT_PASSWORD="$(openssl rand -base64 24)" \
 make obs-up
 
 # Grafana:  kubectl -n observability port-forward svc/kube-prometheus-stack-grafana 3000:80
@@ -84,7 +86,7 @@ make dev          tilt up
 make test         pytest across all services
 make lint         ruff + pyright across all services
 make build        docker build (production target) all services
-make obs-up       install kube-prometheus-stack + Loki + Tempo + OTel
+make obs-up       install kube-prometheus-stack + Loki + Tempo + OTel; requires Grafana and Loki passwords in env
 make argocd-up    install ArgoCD + apply app-of-apps
 make keda-up      install KEDA
 make dashboards   recompile Jsonnet dashboards → Grafana ConfigMaps

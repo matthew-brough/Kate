@@ -17,15 +17,19 @@ The goal is a single `make obs-up` command that installs the full collection and
 
 ### Metrics: kube-prometheus-stack
 
-`prometheus-community/kube-prometheus-stack` bundles Prometheus, Grafana, node-exporter, and kube-state-metrics. The all-in-one chart avoids wiring datasources manually.
+`prometheus-community/kube-prometheus-stack` bundles Prometheus, Alertmanager, Grafana, node-exporter, and kube-state-metrics. The all-in-one chart avoids wiring datasources manually.
 
 `serviceMonitorSelectorNilUsesHelmValues: false` makes Prometheus discover ServiceMonitors from all namespaces — required because service charts deploy to `platform` while Prometheus is in `observability`.
 
 `enableRemoteWriteReceiver: true` allows Tempo's metrics generator to write span-derived RED metrics back into Prometheus (future enhancement).
 
+Alertmanager is enabled so platform alerts have a first-class runtime target. External receivers (PagerDuty, Slack, email, webhooks) are intentionally deferred until the operational owner and escalation policy are chosen.
+
 ### Logs: Loki + Promtail
 
-Loki runs in single-binary mode (no object storage, no persistence) — appropriate for a local k3d portfolio cluster. Promtail is a DaemonSet that tails pod logs and pushes to Loki.
+Loki runs in single-binary mode with local filesystem storage — appropriate for a local k3d portfolio cluster. Promtail is a DaemonSet that tails pod logs and pushes to Loki through the in-cluster Loki gateway.
+
+Loki multi-tenancy is enabled. The gateway enforces basic auth using a Kubernetes secret-generated htpasswd file, then maps the authenticated user to `X-Scope-OrgID`. Promtail and Grafana use the shared `kate` tenant; the password is supplied through `LOKI_TENANT_PASSWORD` at bootstrap time and is never committed to values files.
 
 Promtail's pipeline extracts `trace_id` and `span_id` from structlog JSON output and promotes them to Loki stream labels. This powers Grafana's derived-fields feature: clicking a trace ID in a log line jumps directly to the matching trace in Tempo.
 
@@ -47,6 +51,8 @@ Three linking directions are configured:
 | Traces (Tempo) | Logs (Loki) | `tracesToLogsV2` with `filterByTraceID` |
 | Traces (Tempo) | Service map | `nodeGraph.enabled` (trace-level view) |
 
+Grafana admin credentials come from the `grafana-admin` Kubernetes secret created by `infra/observability/bootstrap.sh`. The chart no longer ships a default `admin/admin` credential.
+
 ### Dashboards: Jsonnet → ConfigMap sidecar
 
 Dashboards are authored in Jsonnet (`dashboards/*.jsonnet`) using a minimal local library (`dashboards/lib/grafana.libsonnet` — no external jb deps). Pre-compiled JSON is committed as ConfigMaps under `infra/observability/dashboards/`. The Grafana sidecar picks them up via the `grafana_dashboard: "1"` label.
@@ -64,6 +70,8 @@ All four FastAPI services (`orders-api`, `auth-api`, `gateway`, `report-api`) ha
 ## Consequences
 
 - `make obs-up` must be run after `make cluster-up` (before or after `make dev` — the observability namespace is independent).
+- `make obs-up` requires `GRAFANA_ADMIN_PASSWORD` and `LOKI_TENANT_PASSWORD`; local generated passwords are acceptable for development.
 - ServiceMonitors are enabled in dev-values for all four HTTP services and Redis.
 - Dashboard ConfigMaps are in `infra/observability/dashboards/` — update via `make dashboards` when panels change.
-- Loki and Tempo data is ephemeral (no persistence) — restarts clear history. Acceptable for a local portfolio cluster.
+- Loki access is restricted to the authenticated gateway path for Grafana and Promtail. Direct Loki pod ingress is limited to Loki's own gateway/memberlist traffic by NetworkPolicy.
+- Loki and Tempo data uses local cluster storage. This is acceptable for a local portfolio cluster; object storage and retention policy design remain deferred for a production environment.
