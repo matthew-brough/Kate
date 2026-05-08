@@ -7,7 +7,7 @@ precision, index-backed queries).
 """
 
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -36,16 +36,29 @@ _ORDER = {
 
 
 @pytest.fixture(scope="module")
-async def pg_engine() -> AsyncGenerator[AsyncEngine]:
+def pg_database_url() -> Generator[str]:
+    if database_url := os.getenv("INTEGRATION_DATABASE_URL"):
+        yield database_url
+        return
+
     from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
     with PostgresContainer("postgres:16-alpine") as pg:
-        url = pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql+asyncpg://")
-        engine = create_async_engine(url)
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        yield engine
-        await engine.dispose()
+        yield pg.get_connection_url().replace(
+            "postgresql+psycopg2://", "postgresql+asyncpg://"
+        )
+
+
+@pytest.fixture
+async def pg_engine(pg_database_url: str) -> AsyncGenerator[AsyncEngine]:
+    engine = create_async_engine(pg_database_url)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 
 @pytest.fixture

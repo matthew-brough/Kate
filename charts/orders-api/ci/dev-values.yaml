@@ -1,6 +1,6 @@
 # Tilt / local dev overrides — merged on top of values.yaml
 image:
-  tag: latest
+  tag: ""  # Tilt overrides this with the local dev image tag.
 
 hpa:
   enabled: true

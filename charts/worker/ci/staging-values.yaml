@@ -1,5 +1,5 @@
 image:
-  tag: latest  # CI sets this to git-sha on promotion
+  tag: ""  # Promotion must set this to an immutable git SHA.
 
 pdb:
   enabled: true

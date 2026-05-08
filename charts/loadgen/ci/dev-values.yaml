@@ -1,2 +1,2 @@
 image:
-  tag: latest
+  tag: ""  # Tilt overrides this with the local dev image tag.
