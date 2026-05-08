@@ -1,6 +1,5 @@
-import jwt
 import structlog
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -8,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.models import User
-from app.schemas import RegisterRequest, TokenPayload, TokenResponse, UserRead
-from app.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.schemas import RegisterRequest, TokenResponse, UserRead
+from app.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 log: structlog.stdlib.BoundLogger = structlog.get_logger()
@@ -50,13 +49,3 @@ async def token(
     access_token = create_access_token(str(user.id), user.username)
     log.info("token_issued", user_id=str(user.id), username=user.username)
     return TokenResponse(access_token=access_token)
-
-
-@router.get("/verify", response_model=TokenPayload)
-async def verify(authorization: str = Header(...)) -> TokenPayload:
-    raw = authorization.removeprefix("Bearer ").strip()
-    try:
-        payload = decode_access_token(raw)
-        return TokenPayload(sub=str(payload["sub"]), username=str(payload["username"]))
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token") from exc

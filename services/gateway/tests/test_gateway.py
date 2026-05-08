@@ -3,6 +3,9 @@ import gzip
 import httpx
 import respx
 from httpx import AsyncClient
+from pytest import MonkeyPatch
+
+from app.settings import settings
 
 
 async def test_health(client: AsyncClient) -> None:
@@ -47,6 +50,39 @@ async def test_auth_route_proxied_without_auth(
         data={"username": "alice", "password": "secret"},
     )
     assert r.status_code == 200
+
+
+async def test_auth_token_rate_limit_uses_x_forwarded_for_when_trusted(
+    client: AsyncClient,
+    mock_upstream: respx.MockRouter,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "rate_limit_trust_x_forwarded_for", True)
+    mock_upstream.post("http://auth-api:8000/auth/token").mock(
+        return_value=httpx.Response(200, json={"access_token": "tok", "token_type": "bearer"})
+    )
+
+    for _ in range(10):
+        r = await client.post(
+            "/api/auth/token",
+            data={"username": "alice", "password": "secret"},
+            headers={"X-Forwarded-For": "198.51.100.1, 10.0.0.10"},
+        )
+        assert r.status_code == 200
+
+    limited = await client.post(
+        "/api/auth/token",
+        data={"username": "alice", "password": "secret"},
+        headers={"X-Forwarded-For": "198.51.100.1, 10.0.0.10"},
+    )
+    assert limited.status_code == 429
+
+    other_client = await client.post(
+        "/api/auth/token",
+        data={"username": "alice", "password": "secret"},
+        headers={"X-Forwarded-For": "198.51.100.2, 10.0.0.10"},
+    )
+    assert other_client.status_code == 200
 
 
 async def test_orders_proxied_with_valid_token(

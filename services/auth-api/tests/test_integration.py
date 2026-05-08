@@ -1,8 +1,8 @@
 """
 Integration tests — require Docker (INTEGRATION=1).
 
-Verifies registration, duplicate-user rejection, JWT minting, and /verify round-trip
-against a real Postgres container.
+Verifies registration, duplicate-user rejection, and JWT minting against a real
+Postgres container.
 """
 
 import os
@@ -84,23 +84,6 @@ async def test_pg_duplicate_email_rejected(pg_client: AsyncClient) -> None:
     await pg_client.post("/auth/register", json=payload)
     r = await pg_client.post("/auth/register", json=payload)
     assert r.status_code == 409
-
-
-async def test_pg_verify_token(pg_client: AsyncClient) -> None:
-    await pg_client.post(
-        "/auth/register",
-        json={"username": "verify", "email": "verify@example.com", "password": "pass1234"},
-    )
-    token_r = await pg_client.post(
-        "/auth/token",
-        data={"username": "verify", "password": "pass1234"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    token = token_r.json()["access_token"]
-
-    r = await pg_client.get("/auth/verify", headers={"Authorization": f"Bearer {token}"})
-    assert r.status_code == 200
-    assert r.json()["username"] == "verify"
 
 
 async def test_pg_wrong_password_rejected(pg_client: AsyncClient) -> None:

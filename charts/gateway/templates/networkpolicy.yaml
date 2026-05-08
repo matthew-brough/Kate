@@ -47,6 +47,9 @@ spec:
         - port: 8000
           protocol: TCP
     - ports:
+        - port: 6379
+          protocol: TCP
+    - ports:
         - port: 4317
           protocol: TCP
 {{- end }}

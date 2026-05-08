@@ -2,3 +2,6 @@ jwtSecret: "test-secret"
 
 env:
   APP_OTLP_ENABLED: "false"
+
+redisSecret:
+  enabled: false

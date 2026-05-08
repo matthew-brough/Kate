@@ -1,5 +1,19 @@
+from urllib.parse import quote, urlsplit, urlunsplit
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def redis_url_with_password(redis_url: str, redis_password: str | None) -> str:
+    if not redis_password:
+        return redis_url
+
+    parts = urlsplit(redis_url)
+    if parts.scheme not in {"redis", "rediss"} or "@" in parts.netloc:
+        return redis_url
+
+    netloc = f":{quote(redis_password, safe='')}@{parts.netloc}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
 
 
 class Settings(BaseSettings):
@@ -33,6 +47,17 @@ class Settings(BaseSettings):
     jwt_audience: str = "kate-platform"
 
     http_timeout: float = 30.0
+
+    rate_limit_redis_url: str = "redis://localhost:6379/0"
+    rate_limit_trust_x_forwarded_for: bool = False
+    redis_password: str | None = None
+
+    @property
+    def effective_rate_limit_redis_url(self) -> str:
+        return redis_url_with_password(
+            self.rate_limit_redis_url,
+            self.redis_password,
+        )
 
 
 settings = Settings()

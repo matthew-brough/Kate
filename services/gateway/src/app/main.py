@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
+import redis.asyncio as redis
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -16,9 +17,18 @@ from app.telemetry import configure_telemetry
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     configure_logging()
     configure_telemetry(app)
+    redis_client = redis.from_url(
+        settings.effective_rate_limit_redis_url,
+        encoding="utf-8",
+        decode_responses=True,
+    )
     async with httpx.AsyncClient(timeout=settings.http_timeout) as client:
         app.state.http_client = client
-        yield
+        app.state.redis_client = redis_client
+        try:
+            yield
+        finally:
+            await redis_client.aclose()
 
 
 def create_app() -> FastAPI:

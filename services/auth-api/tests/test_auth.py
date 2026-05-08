@@ -64,26 +64,6 @@ async def test_token_unknown_user_returns_401(client: AsyncClient) -> None:
     assert r.status_code == 401
 
 
-async def test_verify_valid_token(client: AsyncClient) -> None:
-    await client.post(
-        "/auth/register",
-        json={"username": "frank", "email": "frank@example.com", "password": "secret123"},
-    )
-    token_r = await client.post(
-        "/auth/token",
-        data={"username": "frank", "password": "secret123"},
-    )
-    token = token_r.json()["access_token"]
-    r = await client.get("/auth/verify", headers={"Authorization": f"Bearer {token}"})
-    assert r.status_code == 200
-    assert r.json()["username"] == "frank"
-
-
-async def test_verify_invalid_token_returns_401(client: AsyncClient) -> None:
-    r = await client.get("/auth/verify", headers={"Authorization": "Bearer not-a-real-token"})
-    assert r.status_code == 401
-
-
 @pytest.mark.parametrize(
     "payload",
     [

@@ -1,12 +1,15 @@
 import time
 import uuid
-from collections import defaultdict, deque
+from typing import Protocol, cast
 
+import redis.exceptions
 import structlog
 from opentelemetry import trace
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+from app.settings import settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger()
 
@@ -17,26 +20,62 @@ _RATE_LIMITS: dict[str, tuple[int, int]] = {
 }
 
 
+class RateLimitRedis(Protocol):
+    async def incr(self, name: str) -> int: ...
+
+    async def expire(self, name: str, time: int) -> object: ...
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: object) -> None:
         super().__init__(app)  # type: ignore[arg-type]
-        self._windows: dict[tuple[str, str], deque[float]] = defaultdict(deque)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         rule = _RATE_LIMITS.get(request.url.path)
         if rule is not None:
             limit, window = rule
-            client_ip = request.client.host if request.client else "unknown"
-            key = (client_ip, request.url.path)
-            now = time.monotonic()
-            dq = self._windows[key]
-            while dq and dq[0] < now - window:
-                dq.popleft()
-            if len(dq) >= limit:
+            client_ip = _client_identity(request)
+            redis_client = cast(
+                RateLimitRedis | None,
+                getattr(request.app.state, "redis_client", None),
+            )
+            count = await _increment_rate_limit(redis_client, client_ip, request.url.path, window)
+            if count > limit:
                 logger.warning("rate_limit_exceeded", path=request.url.path, client=client_ip)
                 return JSONResponse({"detail": "Too many requests"}, status_code=429)
-            dq.append(now)
         return await call_next(request)
+
+
+def _client_identity(request: Request) -> str:
+    if settings.rate_limit_trust_x_forwarded_for:
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            first_hop = forwarded_for.split(",", 1)[0].strip()
+            if first_hop:
+                return first_hop
+    return request.client.host if request.client else "unknown"
+
+
+async def _increment_rate_limit(
+    redis_client: RateLimitRedis | None,
+    client_ip: str,
+    path: str,
+    window: int,
+) -> int:
+    if redis_client is None:
+        logger.warning("rate_limit_redis_missing", path=path)
+        return 0
+
+    bucket = int(time.time() // window)
+    key = f"rate-limit:{path}:{client_ip}:{bucket}"
+    try:
+        count = await redis_client.incr(key)
+        if count == 1:
+            await redis_client.expire(key, window)
+        return count
+    except redis.exceptions.RedisError as exc:
+        logger.warning("rate_limit_redis_error", path=path, error=str(exc))
+        return 0
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):

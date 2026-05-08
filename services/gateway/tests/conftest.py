@@ -14,11 +14,24 @@ from app.main import create_app
 from app.settings import settings
 
 
+class FakeRedis:
+    def __init__(self) -> None:
+        self._values: dict[str, int] = {}
+
+    async def incr(self, name: str) -> int:
+        self._values[name] = self._values.get(name, 0) + 1
+        return self._values[name]
+
+    async def expire(self, name: str, time: int) -> None:
+        return None
+
+
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient]:
     app_instance = create_app()
     async with _httpx.AsyncClient() as upstream:
         app_instance.state.http_client = upstream
+        app_instance.state.redis_client = FakeRedis()
         async with AsyncClient(
             transport=ASGITransport(app=app_instance), base_url="http://test"
         ) as c:

@@ -26,14 +26,3 @@ def create_access_token(user_id: str, username: str) -> str:
         "exp": now + timedelta(minutes=settings.jwt_expire_minutes),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
-
-
-def decode_access_token(token: str) -> dict[str, Any]:
-    decoded: dict[str, Any] = jwt.decode(
-        token,
-        settings.jwt_secret,
-        algorithms=["HS256"],
-        audience=settings.jwt_audience,
-        issuer=settings.jwt_issuer,
-    )
-    return decoded
