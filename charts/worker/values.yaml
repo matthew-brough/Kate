@@ -37,6 +37,7 @@ hpa:
   enabled: false
   minReplicas: 1
   maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
 
 # KEDA queue-depth autoscaling (see ADR-0002).
 # Requires: bash infra/keda/bootstrap.sh (make keda-up) before enabling.

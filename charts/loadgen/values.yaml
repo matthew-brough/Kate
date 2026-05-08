@@ -22,3 +22,24 @@ resources:
     memory: 128Mi
   limits:
     memory: 256Mi
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  dns:
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+  gateway:
+    podLabels:
+      app.kubernetes.io/name: gateway
+  extraEgress: []

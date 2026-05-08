@@ -27,6 +27,21 @@ resources:
   limits:
     memory: 128Mi
 
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  path: /metrics
+
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1001
