@@ -11,6 +11,27 @@ from app.settings import settings
 router = APIRouter()
 log: structlog.stdlib.BoundLogger = structlog.get_logger()
 
+_STRIP_REQUEST_HEADERS = {
+    "host",
+    "content-length",
+    "authorization",
+    "x-user-id",
+    "x-username",
+}
+
+_STRIP_RESPONSE_HEADERS = {
+    "connection",
+    "content-encoding",
+    "content-length",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+}
+
 
 def _get_client(request: Request) -> httpx.AsyncClient:
     return cast(httpx.AsyncClient, request.app.state.http_client)
@@ -23,8 +44,9 @@ async def _proxy(
 ) -> Response:
     client = _get_client(request)
 
-    _strip = {"host", "content-length", "authorization", "x-user-id", "x-username"}
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in _strip}
+    headers = {
+        k: v for k, v in request.headers.items() if k.lower() not in _STRIP_REQUEST_HEADERS
+    }
     if user is not None:
         headers["X-User-Id"] = user.sub
         headers["X-Username"] = user.username
@@ -46,7 +68,11 @@ async def _proxy(
     return Response(
         content=upstream.content,
         status_code=upstream.status_code,
-        headers=dict(upstream.headers),
+        headers={
+            k: v
+            for k, v in upstream.headers.items()
+            if k.lower() not in _STRIP_RESPONSE_HEADERS
+        },
     )
 
 

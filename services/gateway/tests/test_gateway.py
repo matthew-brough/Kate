@@ -1,3 +1,5 @@
+import gzip
+
 import httpx
 import respx
 from httpx import AsyncClient
@@ -60,6 +62,37 @@ async def test_orders_proxied_with_valid_token(
         headers={"Authorization": f"Bearer {valid_token}"},
     )
     assert r.status_code == 200
+
+
+async def test_proxy_strips_unsafe_upstream_response_headers(
+    client: AsyncClient,
+    valid_token: str,
+    mock_upstream: respx.MockRouter,
+) -> None:
+    mock_upstream.get("http://orders-api:8000/orders").mock(
+        return_value=httpx.Response(
+            200,
+            content=gzip.compress(b"[]"),
+            headers={
+                "Connection": "keep-alive",
+                "Content-Encoding": "gzip",
+                "Content-Length": "999",
+                "Transfer-Encoding": "chunked",
+                "X-Upstream-Trace": "trace-1",
+            },
+        )
+    )
+    r = await client.get(
+        "/api/orders",
+        headers={"Authorization": f"Bearer {valid_token}"},
+    )
+
+    assert r.status_code == 200
+    assert r.headers["content-length"] == "2"
+    assert "connection" not in r.headers
+    assert "content-encoding" not in r.headers
+    assert "transfer-encoding" not in r.headers
+    assert r.headers["x-upstream-trace"] == "trace-1"
 
 
 async def test_upstream_unavailable_returns_503(
