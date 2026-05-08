@@ -43,3 +43,14 @@ Thumbs.db
 
 # Screenshots (committed manually after capture)
 docs/screenshots/*.png
+
+# markdown files
+*.md
+!README.md
+!docs/**/*.md
+!docs/*.md
+
+#agents
+.agents/
+.claude
+.codex
