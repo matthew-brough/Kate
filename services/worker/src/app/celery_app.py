@@ -6,7 +6,7 @@ from app.settings import settings
 
 celery_app = Celery(
     "kate-worker",
-    broker=settings.celery_broker_url,
+    broker=settings.effective_celery_broker_url,
     include=["app.tasks"],
 )
 celery_app.conf.update(

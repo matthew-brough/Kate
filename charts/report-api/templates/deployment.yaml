@@ -41,6 +41,13 @@ spec:
                   name: {{ include "report-api.fullname" . }}-postgresql
                   key: database-url
             {{- end }}
+            {{- if .Values.redisSecret.enabled }}
+            - name: APP_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redisSecret.name | quote }}
+                  key: {{ .Values.redisSecret.key | quote }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}

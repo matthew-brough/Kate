@@ -1,4 +1,3 @@
-redis:
-  master:
-    persistence:
-      enabled: false
+# Set auth.password from the deployment secret store during promotion.
+auth:
+  password: ""

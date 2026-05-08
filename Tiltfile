@@ -41,6 +41,7 @@ DB_PASSWORDS = {
     "orders-api": _require(_ENV, "APP_ORDERS_DB_PASSWORD"),
     "report-api": _require(_ENV, "APP_REPORT_DB_PASSWORD"),
 }
+REDIS_PASSWORD = _require(_ENV, "APP_REDIS_PASSWORD")
 CHAOS_TOKEN = _require(_ENV, "CHAOS_TOKEN")
 
 # Charts that need jwtSecret injected from .env (auth-api and gateway must agree
@@ -130,6 +131,9 @@ k8s_yaml(
         name      = "redis",
         namespace = NAMESPACE,
         values    = ["charts/redis/ci/dev-values.yaml"],
+        set       = [
+            "auth.password=" + REDIS_PASSWORD,
+        ],
     )
 )
 k8s_resource("redis-master", port_forwards=["6379:6379"], labels=["infra"])

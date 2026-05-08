@@ -29,7 +29,11 @@ jobs:
             name=$(basename "$chart")
             [ "$name" = "_template" ] && continue
             echo "==> Linting $name"
-            helm lint "$chart"
+            helm lint "$chart" \
+              --set jwtSecret=ci-jwt-secret \
+              --set chaosToken=ci-chaos-token \
+              --set postgresql.auth.password=ci-pg-password \
+              --set auth.password=ci-redis-password
           done
 
       - name: kubeconform — validate rendered templates
@@ -41,6 +45,7 @@ jobs:
             --set jwtSecret=ci-jwt-secret
             --set chaosToken=ci-chaos-token
             --set postgresql.auth.password=ci-pg-password
+            --set auth.password=ci-redis-password
         run: |
           for chart in charts/*/; do
             name=$(basename "$chart")

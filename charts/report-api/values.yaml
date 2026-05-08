@@ -20,6 +20,11 @@ env:
   # APP_DATABASE_URL is injected from the postgres Secret when postgresql.enabled.
   # When postgresql.enabled=false (e.g. external DB), set APP_DATABASE_URL here.
 
+redisSecret:
+  enabled: true
+  name: redis-auth
+  key: password
+
 resources:
   requests:
     cpu: 100m

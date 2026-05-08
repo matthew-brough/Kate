@@ -3,9 +3,24 @@ image:
   tag: "7-alpine"
   pullPolicy: IfNotPresent
 
+auth:
+  enabled: true
+  # password has no default — pass via --set auth.password=...
+  # (Tilt sources from APP_REDIS_PASSWORD in .env). Template fails fast.
+  password: ""
+  existingSecret: ""
+  secretName: redis-auth
+  secretKey: password
+
 resources:
   requests:
     cpu: 50m
     memory: 64Mi
   limits:
     memory: 128Mi
+
+networkPolicy:
+  enabled: true
+  allowedClientPodNames:
+    - report-api
+    - worker

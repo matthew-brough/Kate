@@ -36,17 +36,44 @@ spec:
         app.kubernetes.io/name: redis
         app.kubernetes.io/component: master
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: redis
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          args: ["--save", "", "--appendonly", "no"]
+          args:
+            - "--save"
+            - ""
+            - "--appendonly"
+            - "no"
+            {{- if .Values.auth.enabled }}
+            - "--requirepass"
+            - "$(REDIS_PASSWORD)"
+            {{- end }}
           ports:
             - name: redis
               containerPort: 6379
+          {{- if .Values.auth.enabled }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default .Values.auth.secretName | quote }}
+                  key: {{ .Values.auth.secretKey | quote }}
+          {{- end }}
           readinessProbe:
             exec:
+              {{- if .Values.auth.enabled }}
+              command: ["sh", "-c", "REDISCLI_AUTH=\"$REDIS_PASSWORD\" redis-cli ping"]
+              {{- else }}
               command: [redis-cli, ping]
+              {{- end }}
             initialDelaySeconds: 2
             periodSeconds: 5
           livenessProbe:
@@ -55,3 +82,15 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources: {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}

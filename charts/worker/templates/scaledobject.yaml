@@ -1,4 +1,17 @@
 {{- if .Values.keda.enabled }}
+{{- if .Values.redisSecret.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ include "worker.fullname" . }}-redis
+  labels: {{- include "worker.labels" . | nindent 4 }}
+spec:
+  secretTargetRef:
+    - parameter: password
+      name: {{ .Values.redisSecret.name | quote }}
+      key: {{ .Values.redisSecret.key | quote }}
+---
+{{- end }}
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -19,4 +32,8 @@ spec:
         listName: {{ .Values.keda.queueName }}
         listLength: {{ .Values.keda.targetListLength | quote }}
         enableTLS: "false"
+      {{- if .Values.redisSecret.enabled }}
+      authenticationRef:
+        name: {{ include "worker.fullname" . }}-redis
+      {{- end }}
 {{- end }}

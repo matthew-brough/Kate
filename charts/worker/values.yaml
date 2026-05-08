@@ -21,6 +21,11 @@ databaseSecret:
   name: report-api-postgresql
   key: database-url
 
+redisSecret:
+  enabled: true
+  name: redis-auth
+  key: password
+
 resources:
   requests:
     cpu: 200m

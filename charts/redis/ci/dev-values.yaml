@@ -1,8 +1,3 @@
-redis:
-  master:
-    persistence:
-      enabled: false
-  metrics:
-    enabled: true
-    serviceMonitor:
-      enabled: true
+# APP_REDIS_PASSWORD is sourced from .env via Tilt --set auth.password=...
+auth:
+  password: ""

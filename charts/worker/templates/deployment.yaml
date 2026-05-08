@@ -39,6 +39,13 @@ spec:
                   name: {{ .Values.databaseSecret.name | quote }}
                   key: {{ .Values.databaseSecret.key | quote }}
             {{- end }}
+            {{- if .Values.redisSecret.enabled }}
+            - name: APP_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redisSecret.name | quote }}
+                  key: {{ .Values.redisSecret.key | quote }}
+            {{- end }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
             allowPrivilegeEscalation: false
