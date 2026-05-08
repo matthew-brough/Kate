@@ -21,6 +21,7 @@
     "source=kate-venv-worker,target=${containerWorkspaceFolder}/services/worker/.venv,type=volume",
     "source=kate-venv-loadgen,target=${containerWorkspaceFolder}/services/loadgen/.venv,type=volume"
   ],
+  "forwardPorts": [3000, 8000, 8001, 8002, 8080, 8084, 8090, 9090, 10350],
   "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && for svc in gateway auth-api orders-api report-api chaos-portal worker loadgen; do sudo chown -R vscode:vscode ${containerWorkspaceFolder}/services/$svc/.venv 2>/dev/null || true; echo \"→ uv sync: $svc\" && (cd ${containerWorkspaceFolder}/services/$svc && uv sync); done",
   "customizations": {
     "vscode": {
