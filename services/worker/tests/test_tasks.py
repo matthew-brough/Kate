@@ -10,7 +10,7 @@ async def test_process_report_sets_completed(test_engine: AsyncEngine, test_repo
     # Patch asyncio.sleep to avoid 2-8s delay in tests.
     with (
         patch("app.tasks.asyncio.sleep"),
-        patch("app.tasks._make_engine", return_value=test_engine),
+        patch("app.tasks._get_engine", return_value=test_engine),
     ):
         await _process_report(str(test_report.id))
 
@@ -29,14 +29,14 @@ async def test_process_report_unknown_id_is_noop(test_engine: AsyncEngine) -> No
 
     with (
         patch("app.tasks.asyncio.sleep"),
-        patch("app.tasks._make_engine", return_value=test_engine),
+        patch("app.tasks._get_engine", return_value=test_engine),
     ):
         # Should not raise; just logs a warning and returns.
         await _process_report(str(uuid.uuid4()))
 
 
 async def test_fail_report_sets_failed(test_engine: AsyncEngine, test_report: Report) -> None:
-    with patch("app.tasks._make_engine", return_value=test_engine):
+    with patch("app.tasks._get_engine", return_value=test_engine):
         await _fail_report(str(test_report.id))
 
     factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
