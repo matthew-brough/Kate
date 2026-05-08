@@ -1,5 +1,6 @@
 import enum
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, Enum, Integer, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -22,7 +23,7 @@ class Order(Base):
     product_id: Mapped[str] = mapped_column(String(36), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     # Stored as NUMERIC(10,2) — avoids floating-point rounding in the DB.
-    unit_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[OrderStatus] = mapped_column(
         # native_enum=False stores as VARCHAR — works with both Postgres and SQLite (tests).
         Enum(OrderStatus, name="orderstatus", native_enum=False),

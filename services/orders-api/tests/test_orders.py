@@ -17,6 +17,8 @@ async def test_create_order(client: AsyncClient) -> None:
     body = r.json()
     assert body["user_id"] == "user-abc"
     assert body["status"] == "pending"
+    assert body["unit_price"] == 9.99
+    assert isinstance(body["unit_price"], float)
     assert body["id"] >= 1
 
 
@@ -87,6 +89,15 @@ async def test_update_order_wrong_user_returns_404(client: AsyncClient) -> None:
 
 async def test_create_order_invalid_quantity(client: AsyncClient) -> None:
     r = await client.post("/orders", json={**ORDER_PAYLOAD, "quantity": 0}, headers=USER_HEADER)
+    assert r.status_code == 422
+
+
+async def test_create_order_rejects_more_than_two_decimal_places(client: AsyncClient) -> None:
+    r = await client.post(
+        "/orders",
+        json={**ORDER_PAYLOAD, "unit_price": 9.999},
+        headers=USER_HEADER,
+    )
     assert r.status_code == 422
 
 

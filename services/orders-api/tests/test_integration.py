@@ -102,4 +102,5 @@ async def test_pg_unit_price_precision(pg_client: AsyncClient) -> None:
     payload = {**_ORDER, "unit_price": 9.99}
     created = (await pg_client.post("/orders", json=payload)).json()
     r = await pg_client.get(f"/orders/{created['id']}")
-    assert float(r.json()["unit_price"]) == pytest.approx(9.99)
+    assert r.json()["unit_price"] == 9.99
+    assert isinstance(r.json()["unit_price"], float)
