@@ -14,9 +14,44 @@ async def test_health(client: AsyncClient) -> None:
     assert r.json()["status"] == "ok"
 
 
-async def test_ready(client: AsyncClient) -> None:
+async def test_ready(client: AsyncClient, mock_upstream: respx.MockRouter) -> None:
+    mock_upstream.get("http://auth-api:8000/health").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+    mock_upstream.get("http://orders-api:8000/health").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+    mock_upstream.get("http://report-api:8000/health").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
     r = await client.get("/ready")
     assert r.status_code == 200
+    assert r.json()["dependencies"] == {
+        "auth-api": "ready",
+        "orders-api": "ready",
+        "report-api": "ready",
+    }
+
+
+async def test_ready_returns_503_when_upstream_unavailable(
+    client: AsyncClient,
+    mock_upstream: respx.MockRouter,
+) -> None:
+    mock_upstream.get("http://auth-api:8000/health").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+    mock_upstream.get("http://orders-api:8000/health").mock(
+        side_effect=httpx.ConnectError("refused")
+    )
+    mock_upstream.get("http://report-api:8000/health").mock(
+        return_value=httpx.Response(200, json={"status": "ok"})
+    )
+
+    r = await client.get("/ready")
+
+    assert r.status_code == 503
+    assert r.json()["status"] == "degraded"
+    assert r.json()["dependencies"]["orders-api"] == "unavailable"
 
 
 async def test_metrics(client: AsyncClient) -> None:

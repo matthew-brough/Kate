@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     jwt_audience: str = "kate-platform"
 
     http_timeout: float = 30.0
+    readiness_timeout: float = 2.0
 
     rate_limit_redis_url: str = "redis://localhost:6379/0"
     rate_limit_trust_x_forwarded_for: bool = False
