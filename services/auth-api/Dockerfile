@@ -4,7 +4,7 @@ ARG PYTHON_VERSION=3.14
 # ── Builder ───────────────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.11@sha256:798712e57f879c5393777cbda2bb309b29fcdeb0532129d4b1c3125c5385975a /uv /usr/local/bin/uv
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN uv sync --no-dev --no-editable
 # ── Dev ──────────────────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS dev
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.11@sha256:798712e57f879c5393777cbda2bb309b29fcdeb0532129d4b1c3125c5385975a /uv /usr/local/bin/uv
 
 WORKDIR /app
 

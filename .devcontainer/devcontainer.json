@@ -6,7 +6,7 @@
   },
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-      "version": "latest",
+      "version": "1.9.1",
       "enableNonRootDocker": "true",
       "moby": "false"
     }
