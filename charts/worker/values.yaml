@@ -58,3 +58,22 @@ pdb:
 
 networkPolicy:
   enabled: false
+  dns:
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+  otel:
+    namespace: observability
+    podLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+      app.kubernetes.io/instance: otel-collector
+  database:
+    podLabels:
+      app.kubernetes.io/name: report-api-postgresql
+  redis:
+    podLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: master
+  # Additional egress rules for external DBs, hosted telemetry, or other
+  # environment-specific dependencies.
+  extraEgress: []

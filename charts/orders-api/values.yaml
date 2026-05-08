@@ -42,6 +42,18 @@ serviceMonitor:
 
 networkPolicy:
   enabled: true
+  dns:
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+  otel:
+    namespace: observability
+    podLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+      app.kubernetes.io/instance: otel-collector
+  # Additional egress rules for external DBs, hosted telemetry, or other
+  # environment-specific dependencies.
+  extraEgress: []
 
 probes:
   liveness:

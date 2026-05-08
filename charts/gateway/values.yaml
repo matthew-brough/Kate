@@ -54,6 +54,26 @@ serviceMonitor:
 
 networkPolicy:
   enabled: true
+  dns:
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+  otel:
+    namespace: observability
+    podLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+      app.kubernetes.io/instance: otel-collector
+  redis:
+    podLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: master
+  upstreams:
+    - auth-api
+    - orders-api
+    - report-api
+  # Additional egress rules for external upstreams, hosted telemetry, or other
+  # environment-specific dependencies.
+  extraEgress: []
 
 probes:
   liveness:

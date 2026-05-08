@@ -38,18 +38,42 @@ spec:
   policyTypes:
     - Egress
   egress:
-    - ports:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.dns.namespace | quote }}
+          podSelector:
+            matchLabels: {{- toYaml .Values.networkPolicy.dns.podLabels | nindent 14 }}
+      ports:
         - port: 53
           protocol: UDP
         - port: 53
           protocol: TCP
-    - ports:
+    {{- range .Values.networkPolicy.upstreams }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ . | quote }}
+      ports:
         - port: 8000
           protocol: TCP
-    - ports:
+    {{- end }}
+    - to:
+        - podSelector:
+            matchLabels: {{- toYaml .Values.networkPolicy.redis.podLabels | nindent 14 }}
+      ports:
         - port: 6379
           protocol: TCP
-    - ports:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.otel.namespace | quote }}
+          podSelector:
+            matchLabels: {{- toYaml .Values.networkPolicy.otel.podLabels | nindent 14 }}
+      ports:
         - port: 4317
           protocol: TCP
+    {{- with .Values.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 {{- end }}

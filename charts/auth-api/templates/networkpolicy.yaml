@@ -41,15 +41,34 @@ spec:
   policyTypes:
     - Egress
   egress:
-    - ports:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.dns.namespace | quote }}
+          podSelector:
+            matchLabels: {{- toYaml .Values.networkPolicy.dns.podLabels | nindent 14 }}
+      ports:
         - port: 53
           protocol: UDP
         - port: 53
           protocol: TCP
-    - ports:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "auth-api.fullname" . }}-postgresql
+      ports:
         - port: 5432
           protocol: TCP
-    - ports:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.otel.namespace | quote }}
+          podSelector:
+            matchLabels: {{- toYaml .Values.networkPolicy.otel.podLabels | nindent 14 }}
+      ports:
         - port: 4317
           protocol: TCP
+    {{- with .Values.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 {{- end }}
