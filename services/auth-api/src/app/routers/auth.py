@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,16 @@ async def register(
     body: RegisterRequest,
     session: AsyncSession = Depends(get_session),
 ) -> User:
+    existing = await session.execute(
+        select(User.id).where(
+            or_(User.username == body.username, User.email == str(body.email))
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Username or email already registered"
+        )
+
     user = User(
         username=body.username,
         email=str(body.email),

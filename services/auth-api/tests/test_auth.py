@@ -28,6 +28,20 @@ async def test_register_duplicate_returns_409(client: AsyncClient) -> None:
     assert r.status_code == 409
 
 
+async def test_register_duplicate_skips_password_hash(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = {"username": "bob", "email": "bob@example.com", "password": VALID_PASSWORD}
+    await client.post("/auth/register", json=payload)
+
+    async def fail_hash(password: str) -> str:
+        raise AssertionError("duplicate registration should not hash password")
+
+    monkeypatch.setattr("app.routers.auth.hash_password_async", fail_hash)
+    r = await client.post("/auth/register", json=payload)
+    assert r.status_code == 409
+
+
 async def test_register_case_variant_duplicate_returns_409(client: AsyncClient) -> None:
     await client.post(
         "/auth/register",

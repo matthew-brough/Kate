@@ -6,6 +6,7 @@ Locust env vars control behaviour: LOCUST_HOST, LOCUST_USERS, LOCUST_SPAWN_RATE.
 
 import os
 import random
+import re
 import string
 import time
 import uuid
@@ -19,6 +20,7 @@ fake = Faker()
 PRODUCTS = [str(uuid.uuid4()) for _ in range(20)]
 REQUEST_TIMEOUT = 5
 AUTH_RETRY_BACKOFF_SECONDS = 60
+MAX_REGISTER_ATTEMPTS = 2
 ORDER_LIST_LABEL = "purchase list [GET]"
 ORDER_CREATE_LABEL = "purchase create [POST]"
 REPORT_CREATE_LABEL = "analytics create [POST]"
@@ -35,15 +37,18 @@ class PlatformUser(HttpUser):
     _password: str
     _client_ip: str
     _registered: bool
+    _register_attempts: int
     _next_auth_attempt_at: float
 
     def on_start(self) -> None:
+        host = re.sub(r"[^a-z0-9]+", "", os.getenv("HOSTNAME", "local").lower())[:12]
         suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-        self._username = f"load_{suffix}"
+        self._username = f"load_{host}_{suffix}"
         self._password = os.environ["LOADGEN_PASSWORD"]
         self._token = ""
         self._client_ip = fake.ipv4_private()
         self._registered = False
+        self._register_attempts = 0
         self._next_auth_attempt_at = 0
         self._ensure_token()
 
@@ -79,18 +84,18 @@ class PlatformUser(HttpUser):
         if time.monotonic() < self._next_auth_attempt_at:
             return False
 
-        if not self._registered:
+        if not self._registered and self._register_attempts < MAX_REGISTER_ATTEMPTS:
+            self._register_attempts += 1
             register = self._register()
             if register.status_code in (201, 409):
                 self._registered = True
-            else:
-                self._next_auth_attempt_at = time.monotonic() + AUTH_RETRY_BACKOFF_SECONDS
-                return False
 
         r = self._login()
         if r.status_code == 200:
             self._token = r.json().get("access_token", "")
             return bool(self._token)
+        if r.status_code == 401 and self._register_attempts < MAX_REGISTER_ATTEMPTS:
+            self._registered = False
         self._next_auth_attempt_at = time.monotonic() + AUTH_RETRY_BACKOFF_SECONDS
         return False
 
