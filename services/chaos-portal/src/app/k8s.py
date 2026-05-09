@@ -33,6 +33,11 @@ def _networking() -> client.NetworkingV1Api:
     return client.NetworkingV1Api()
 
 
+def _apps() -> client.AppsV1Api:
+    _ensure_config()
+    return client.AppsV1Api()
+
+
 @dataclass
 class PodInfo:
     name: str
@@ -45,6 +50,16 @@ class PodInfo:
 class PartitionInfo:
     service: str
     policy_name: str
+
+
+@dataclass
+class LoadgenStatus:
+    deployment_name: str
+    replicas: int
+    ready_replicas: int
+    users: str
+    spawn_rate: str
+    host: str
 
 
 def list_pods(namespace: str) -> list[PodInfo]:
@@ -149,3 +164,53 @@ def toggle_partition(namespace: str, service: str) -> bool:
             name=policy_name, namespace=namespace, body=patch
         )
         return True
+
+
+def get_loadgen_status(namespace: str, deployment_name: str) -> LoadgenStatus:
+    deployment = _apps().read_namespaced_deployment(name=deployment_name, namespace=namespace)
+    spec = deployment.spec
+    status = deployment.status
+    containers = spec.template.spec.containers if spec and spec.template.spec else []
+    container = next(
+        (c for c in containers if c.name == "loadgen"),
+        containers[0] if containers else None,
+    )
+    env_items = container.env or [] if container else []
+    env = {item.name: item.value or "" for item in env_items if item.name}
+    return LoadgenStatus(
+        deployment_name=deployment_name,
+        replicas=spec.replicas if spec and spec.replicas is not None else 0,
+        ready_replicas=status.ready_replicas if status and status.ready_replicas is not None else 0,
+        users=env.get("LOCUST_USERS", "-") or "-",
+        spawn_rate=env.get("LOCUST_SPAWN_RATE", "-") or "-",
+        host=env.get("LOCUST_HOST", "-") or "-",
+    )
+
+
+def scale_loadgen(
+    namespace: str,
+    deployment_name: str,
+    *,
+    replicas: int,
+    users: int,
+    spawn_rate: int,
+) -> None:
+    patch: dict[str, Any] = {
+        "spec": {
+            "replicas": replicas,
+            "template": {
+                "spec": {
+                    "containers": [
+                        {
+                            "name": "loadgen",
+                            "env": [
+                                {"name": "LOCUST_USERS", "value": str(users)},
+                                {"name": "LOCUST_SPAWN_RATE", "value": str(spawn_rate)},
+                            ],
+                        }
+                    ]
+                }
+            },
+        }
+    }
+    _apps().patch_namespaced_deployment(name=deployment_name, namespace=namespace, body=patch)

@@ -4,6 +4,7 @@ from base64 import b64decode
 from binascii import Error as BinasciiError
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 import structlog
@@ -30,9 +31,28 @@ log = structlog.get_logger()
 
 NAMESPACE = os.getenv("CHAOS_NAMESPACE", "platform")
 SERVICES = os.getenv("CHAOS_SERVICES", "orders-api,auth-api,report-api,worker").split(",")
+LOADGEN_DEPLOYMENT = os.getenv("CHAOS_LOADGEN_DEPLOYMENT", "loadgen")
 CHAOS_AUTH_MODE = os.getenv("CHAOS_AUTH_MODE", "token")
 CHAOS_TOKEN = os.getenv("CHAOS_TOKEN", "")
 AUTH_REALM = "chaos-portal"
+
+
+@dataclass(frozen=True)
+class LoadgenProfile:
+    name: str
+    label: str
+    replicas: int
+    users: int
+    spawn_rate: int
+
+
+LOADGEN_PROFILES = (
+    LoadgenProfile("baseline", "baseline", replicas=1, users=5, spawn_rate=1),
+    LoadgenProfile("busy", "busy", replicas=2, users=25, spawn_rate=5),
+    LoadgenProfile("surge", "surge", replicas=3, users=100, spawn_rate=20),
+    LoadgenProfile("breakpoint", "breakpoint", replicas=5, users=250, spawn_rate=50),
+)
+LOADGEN_PROFILE_MAP = {profile.name: profile for profile in LOADGEN_PROFILES}
 
 
 @asynccontextmanager
@@ -102,19 +122,43 @@ def _basic_password_matches(credentials: str) -> bool:
     return bool(separator) and _token_matches(password)
 
 
+def _loadgen_context() -> dict[str, object]:
+    status = k8s.get_loadgen_status(NAMESPACE, LOADGEN_DEPLOYMENT)
+    active_profile = next(
+        (
+            profile.name
+            for profile in LOADGEN_PROFILES
+            if (
+                status.replicas == profile.replicas
+                and status.users == str(profile.users)
+                and status.spawn_rate == str(profile.spawn_rate)
+            )
+        ),
+        "",
+    )
+    return {
+        "loadgen_status": status,
+        "loadgen_profiles": LOADGEN_PROFILES,
+        "active_loadgen_profile": active_profile,
+        "namespace": NAMESPACE,
+    }
+
+
 async def index(request: Request) -> Response:
     pods = k8s.list_pods(NAMESPACE)
     partitions = k8s.list_partitions(NAMESPACE)
     active_partitions = {p.service for p in partitions}
+    context: dict[str, object] = {
+        "pods": pods,
+        "services": SERVICES,
+        "active_partitions": active_partitions,
+        "namespace": NAMESPACE,
+    }
+    context.update(_loadgen_context())
     return _templates.TemplateResponse(
         request,
         "index.html",
-        {
-            "pods": pods,
-            "services": SERVICES,
-            "active_partitions": active_partitions,
-            "namespace": NAMESPACE,
-        },
+        context,
     )
 
 
@@ -167,6 +211,34 @@ async def toggle_partition(request: Request) -> Response:
     )
 
 
+async def loadgen_panel(request: Request) -> Response:
+    return _templates.TemplateResponse(request, "_loadgen_panel.html", _loadgen_context())
+
+
+async def apply_loadgen_profile(request: Request) -> Response:
+    profile_name = request.path_params["profile"]
+    profile = LOADGEN_PROFILE_MAP.get(profile_name)
+    if profile is None:
+        return Response(f"loadgen profile {profile_name!r} not configured", status_code=400)
+    k8s.scale_loadgen(
+        NAMESPACE,
+        LOADGEN_DEPLOYMENT,
+        replicas=profile.replicas,
+        users=profile.users,
+        spawn_rate=profile.spawn_rate,
+    )
+    log.info(
+        "loadgen_profile_applied",
+        profile=profile.name,
+        replicas=profile.replicas,
+        users=profile.users,
+        spawn_rate=profile.spawn_rate,
+        deployment=LOADGEN_DEPLOYMENT,
+        namespace=NAMESPACE,
+    )
+    return _templates.TemplateResponse(request, "_loadgen_panel.html", _loadgen_context())
+
+
 async def health(request: Request) -> Response:
     return Response("ok")
 
@@ -184,6 +256,8 @@ app = Starlette(
         Route("/pods/{name}/kill", kill_pod, methods=["POST"]),
         Route("/partitions", partition_list),
         Route("/partitions/{service}/toggle", toggle_partition, methods=["POST"]),
+        Route("/loadgen", loadgen_panel),
+        Route("/loadgen/{profile}/apply", apply_loadgen_profile, methods=["POST"]),
         Route("/health", health),
         Route("/ready", ready),
     ],

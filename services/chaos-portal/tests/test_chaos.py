@@ -3,18 +3,34 @@ from unittest.mock import MagicMock, patch
 
 from starlette.testclient import TestClient
 
-from app.k8s import PartitionInfo, PodInfo
+from app.k8s import LoadgenStatus, PartitionInfo, PodInfo
 from app.main import CHAOS_TOKEN
+
+
+def loadgen_status(
+    replicas: int = 1, users: str = "5", spawn_rate: str = "1"
+) -> LoadgenStatus:
+    return LoadgenStatus(
+        deployment_name="loadgen",
+        replicas=replicas,
+        ready_replicas=replicas,
+        users=users,
+        spawn_rate=spawn_rate,
+        host="http://gateway-headless:8000",
+    )
 
 
 @patch("app.main.k8s")
 def test_index(mock_k8s: MagicMock, client: TestClient) -> None:
     mock_k8s.list_pods.return_value = []
     mock_k8s.list_partitions.return_value = []
+    mock_k8s.get_loadgen_status.return_value = loadgen_status()
     resp = client.get("/")
     assert resp.status_code == 200
     assert "Chaos Portal" in resp.text
     assert "platform" in resp.text
+    assert "Loadgen Demand" in resp.text
+    assert "baseline: 1 pods / 5 users each" in resp.text
 
 
 @patch("app.main.k8s")
@@ -70,6 +86,41 @@ def test_toggle_partition_restore(mock_k8s: MagicMock, client: TestClient) -> No
     resp = client.post("/partitions/orders-api/toggle")
     assert resp.status_code == 200
     assert "PARTITIONED" not in resp.text
+
+
+@patch("app.main.k8s")
+def test_loadgen_panel(mock_k8s: MagicMock, client: TestClient) -> None:
+    mock_k8s.get_loadgen_status.return_value = loadgen_status(
+        replicas=3, users="100", spawn_rate="20"
+    )
+    resp = client.get("/loadgen")
+    assert resp.status_code == 200
+    assert "loadgen" in resp.text
+    assert "3/3" in resp.text
+    assert "surge: 3 pods / 100 users each" in resp.text
+
+
+@patch("app.main.k8s")
+def test_apply_loadgen_profile(mock_k8s: MagicMock, client: TestClient) -> None:
+    mock_k8s.get_loadgen_status.return_value = loadgen_status(
+        replicas=3, users="100", spawn_rate="20"
+    )
+    resp = client.post("/loadgen/surge/apply")
+    assert resp.status_code == 200
+    mock_k8s.scale_loadgen.assert_called_once_with(
+        "platform", "loadgen", replicas=3, users=100, spawn_rate=20
+    )
+    assert "surge: 3 pods / 100 users each" in resp.text
+
+
+@patch("app.main.k8s")
+def test_apply_loadgen_profile_rejects_unknown(
+    mock_k8s: MagicMock, client: TestClient
+) -> None:
+    resp = client.post("/loadgen/unbounded/apply")
+    assert resp.status_code == 400
+    assert "not configured" in resp.text
+    mock_k8s.scale_loadgen.assert_not_called()
 
 
 def test_health(client: TestClient) -> None:

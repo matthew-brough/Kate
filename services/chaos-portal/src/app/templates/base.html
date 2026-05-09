@@ -66,11 +66,15 @@
     button.partition:hover { background: #1e1000; }
     button.restore { border-color: #6bcb77; color: #6bcb77; }
     button.restore:hover { background: #001e08; }
+    button.loadgen { border-color: #4dabf7; color: #4dabf7; margin: 0 8px 8px 0; }
+    button.loadgen:hover, button.loadgen.active { background: #001426; }
+    button.loadgen.active { box-shadow: inset 0 -2px 0 #4dabf7; }
     .htmx-indicator { color: #555; font-style: italic; }
     .service-row { display: flex; align-items: center; gap: 16px; padding: 8px 0;
                    border-bottom: 1px solid #1e1e1e; }
     .service-name { width: 180px; }
     .service-status { width: 140px; }
+    .loadgen-actions { margin-top: 14px; }
     .empty { color: #555; font-style: italic; padding: 8px 0; }
   </style>
 </head>

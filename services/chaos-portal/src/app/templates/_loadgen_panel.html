@@ -1,0 +1,38 @@
+<div id="loadgen-panel"
+     hx-get="/loadgen"
+     hx-trigger="every 10s"
+     hx-swap="outerHTML">
+  <table>
+    <thead>
+      <tr>
+        <th>Deployment</th>
+        <th>Ready</th>
+        <th>Users/pod</th>
+        <th>Spawn/s</th>
+        <th>Host</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ loadgen_status.deployment_name }}</td>
+        <td>{{ loadgen_status.ready_replicas }}/{{ loadgen_status.replicas }}</td>
+        <td>{{ loadgen_status.users }}</td>
+        <td>{{ loadgen_status.spawn_rate }}</td>
+        <td>{{ loadgen_status.host }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="loadgen-actions">
+    {% for profile in loadgen_profiles %}
+    <button class="loadgen {% if profile.name == active_loadgen_profile %}active{% endif %}"
+            hx-post="/loadgen/{{ profile.name }}/apply"
+            hx-target="#loadgen-panel"
+            hx-swap="outerHTML"
+            hx-confirm="Apply {{ profile.label }} loadgen profile? This will patch loadgen demand.">
+      {{ profile.label }}: {{ profile.replicas }} pods / {{ profile.users }} users each
+    </button>
+    {% endfor %}
+  </div>
+  <p style="color:#333; font-size:11px; margin-top:8px;">auto-refresh every 10s</p>
+</div>

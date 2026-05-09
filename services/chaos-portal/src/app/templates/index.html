@@ -13,4 +13,13 @@
   </p>
   {% include "_partition_list.html" %}
 </section>
+
+<section>
+  <h2>Loadgen Demand</h2>
+  <p style="color:#555; font-size:12px; margin-bottom:12px;">
+    Patches the <code>{{ loadgen_status.deployment_name }}</code> Deployment replicas plus
+    <code>LOCUST_USERS</code> and <code>LOCUST_SPAWN_RATE</code>.
+  </p>
+  {% include "_loadgen_panel.html" %}
+</section>
 {% endblock %}

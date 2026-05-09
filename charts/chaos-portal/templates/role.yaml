@@ -26,4 +26,12 @@ rules:
       - {{ printf "%s-allow-ingress" (trim .) | quote }}
       {{- end }}
     verbs: ["patch"]
+  # The loadgen controls are intentionally scoped to one Deployment. The
+  # portal can read current demand and apply bounded profiles, but not patch
+  # arbitrary app deployments.
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames:
+      - {{ .Values.env.CHAOS_LOADGEN_DEPLOYMENT | quote }}
+    verbs: ["get", "patch"]
 {{- end }}
