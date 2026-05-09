@@ -1,6 +1,7 @@
 from base64 import b64encode
 from unittest.mock import MagicMock, patch
 
+import pytest
 from starlette.testclient import TestClient
 
 from app.k8s import LoadgenStatus, PartitionInfo, PodInfo
@@ -47,13 +48,54 @@ def test_pod_list(mock_k8s: MagicMock, client: TestClient) -> None:
     assert "Pending" in resp.text
 
 
+@pytest.mark.parametrize(
+    "pod_name",
+    [
+        "orders-api-fb4d9f8dc-7nfhn",
+        "gateway-5dc77c9bb8-7wq22",
+        "loadgen-6bff8fc46f-fz67l",
+        "redis-master-698b5f9799-rb6wg",
+    ],
+)
 @patch("app.main.k8s")
-def test_kill_pod(mock_k8s: MagicMock, client: TestClient) -> None:
+def test_kill_pod(mock_k8s: MagicMock, client: TestClient, pod_name: str) -> None:
     mock_k8s.delete_pod.return_value = None
     mock_k8s.list_pods.return_value = []
-    resp = client.post("/pods/orders-api-abc123/kill")
+    resp = client.post(f"/pods/{pod_name}/kill")
     assert resp.status_code == 200
-    mock_k8s.delete_pod.assert_called_once_with("platform", "orders-api-abc123")
+    mock_k8s.delete_pod.assert_called_once_with("platform", pod_name)
+
+
+@patch("app.main.k8s")
+def test_pod_list_marks_unconfigured_pods_protected(
+    mock_k8s: MagicMock, client: TestClient
+) -> None:
+    mock_k8s.list_pods.return_value = [
+        PodInfo(
+            name="redis-master-698b5f9799-rb6wg",
+            phase="Running",
+            ready="1/1",
+            node="k3d-agent-0",
+        ),
+        PodInfo(
+            name="auth-api-postgresql-86985b8c8c-dt9pq",
+            phase="Running",
+            ready="1/1",
+            node="k3d-agent-0",
+        ),
+        PodInfo(
+            name="chaos-portal-74969847f5-6vn6n",
+            phase="Running",
+            ready="1/1",
+            node="k3d-agent-0",
+        ),
+    ]
+    resp = client.get("/pods")
+    assert resp.status_code == 200
+    assert "/pods/redis-master-698b5f9799-rb6wg/kill" in resp.text
+    assert "/pods/auth-api-postgresql-86985b8c8c-dt9pq/kill" not in resp.text
+    assert "/pods/chaos-portal-74969847f5-6vn6n/kill" not in resp.text
+    assert resp.text.count("protected") == 2
 
 
 @patch("app.main.k8s")

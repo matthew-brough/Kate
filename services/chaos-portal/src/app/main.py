@@ -1,5 +1,6 @@
 import hmac
 import os
+import re
 from base64 import b64decode
 from binascii import Error as BinasciiError
 from collections.abc import AsyncIterator
@@ -30,7 +31,16 @@ structlog.configure(
 log = structlog.get_logger()
 
 NAMESPACE = os.getenv("CHAOS_NAMESPACE", "platform")
-SERVICES = os.getenv("CHAOS_SERVICES", "orders-api,auth-api,report-api,worker").split(",")
+DEFAULT_SERVICES = "orders-api,auth-api,report-api,worker"
+DEFAULT_KILL_TARGETS = f"{DEFAULT_SERVICES},gateway,loadgen,redis-master"
+
+
+def _split_csv_env(name: str, default: str) -> tuple[str, ...]:
+    return tuple(item.strip() for item in os.getenv(name, default).split(",") if item.strip())
+
+
+SERVICES = _split_csv_env("CHAOS_SERVICES", DEFAULT_SERVICES)
+KILL_TARGETS = _split_csv_env("CHAOS_KILL_TARGETS", DEFAULT_KILL_TARGETS)
 LOADGEN_DEPLOYMENT = os.getenv("CHAOS_LOADGEN_DEPLOYMENT", "loadgen")
 CHAOS_AUTH_MODE = os.getenv("CHAOS_AUTH_MODE", "token")
 CHAOS_TOKEN = os.getenv("CHAOS_TOKEN", "")
@@ -69,6 +79,7 @@ async def lifespan(app: Starlette) -> AsyncIterator[None]:
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 _OPEN_PATHS = {"/health", "/ready"}
+_DEPLOYMENT_POD_SUFFIX = re.compile(r"[a-z0-9]{8,10}-[a-z0-9]{5}")
 
 
 class TokenAuthMiddleware:
@@ -122,6 +133,22 @@ def _basic_password_matches(credentials: str) -> bool:
     return bool(separator) and _token_matches(password)
 
 
+def _is_killable_pod(name: str) -> bool:
+    return any(
+        name.startswith(f"{target}-")
+        and _DEPLOYMENT_POD_SUFFIX.fullmatch(name.removeprefix(f"{target}-")) is not None
+        for target in KILL_TARGETS
+    )
+
+
+def _pod_list_context(pods: list[k8s.PodInfo]) -> dict[str, object]:
+    return {
+        "pods": pods,
+        "killable_pods": {pod.name for pod in pods if _is_killable_pod(pod.name)},
+        "namespace": NAMESPACE,
+    }
+
+
 def _loadgen_context() -> dict[str, object]:
     status = k8s.get_loadgen_status(NAMESPACE, LOADGEN_DEPLOYMENT)
     active_profile = next(
@@ -149,10 +176,9 @@ async def index(request: Request) -> Response:
     partitions = k8s.list_partitions(NAMESPACE)
     active_partitions = {p.service for p in partitions}
     context: dict[str, object] = {
-        "pods": pods,
+        **_pod_list_context(pods),
         "services": SERVICES,
         "active_partitions": active_partitions,
-        "namespace": NAMESPACE,
     }
     context.update(_loadgen_context())
     return _templates.TemplateResponse(
@@ -165,24 +191,24 @@ async def index(request: Request) -> Response:
 async def pod_list(request: Request) -> Response:
     pods = k8s.list_pods(NAMESPACE)
     return _templates.TemplateResponse(
-        request, "_pod_list.html", {"pods": pods, "namespace": NAMESPACE}
+        request, "_pod_list.html", _pod_list_context(pods)
     )
 
 
 async def kill_pod(request: Request) -> Response:
     # The token gates "can call this API" but doesn't constrain *what* — without
     # a server-side allowlist a token-holder could delete any pod in the
-    # namespace (chaos-portal itself included). k8s pod names are
-    # <deployment>-<rs>-<pod>, so prefix-match against `<service>-` is the
-    # right shape for the allowlist.
+    # namespace (chaos-portal itself included). Match the Deployment pod-name
+    # shape against explicit kill targets so auth-api-postgresql, migration
+    # jobs, and other similarly-prefixed pods are not swept in.
     name = request.path_params["name"]
-    if not any(name.startswith(s + "-") for s in SERVICES):
-        return Response(f"pod {name!r} not in SERVICES allowlist", status_code=400)
+    if not _is_killable_pod(name):
+        return Response(f"pod {name!r} not in KILL_TARGETS allowlist", status_code=400)
     k8s.delete_pod(NAMESPACE, name)
     log.info("pod_killed", pod=name, namespace=NAMESPACE)
     pods = k8s.list_pods(NAMESPACE)
     return _templates.TemplateResponse(
-        request, "_pod_list.html", {"pods": pods, "namespace": NAMESPACE}
+        request, "_pod_list.html", _pod_list_context(pods)
     )
 
 

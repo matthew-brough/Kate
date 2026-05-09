@@ -7,4 +7,5 @@ auth:
 env:
   CHAOS_NAMESPACE: "platform"
   CHAOS_SERVICES: "orders-api,auth-api,report-api,worker"
+  CHAOS_KILL_TARGETS: "orders-api,auth-api,report-api,worker,gateway,loadgen,redis-master"
   CHAOS_LOADGEN_DEPLOYMENT: "loadgen"

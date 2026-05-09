@@ -8,8 +8,8 @@ metadata:
   labels: {{- include "chaos-portal.labels" . | nindent 4 }}
 rules:
   # Pod list/get is needed for the UI; delete can't be resourceName-scoped
-  # because pod names are dynamic. The server-side allowlist in main.py
-  # (kill_pod prefix-matches name against SERVICES) is the actual control.
+  # because pod names are dynamic. The server-side CHAOS_KILL_TARGETS
+  # allowlist in main.py is the actual delete control.
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list", "get", "delete"]

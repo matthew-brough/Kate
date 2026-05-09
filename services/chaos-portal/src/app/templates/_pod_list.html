@@ -21,6 +21,7 @@
         <td>{{ pod.ready }}</td>
         <td>{{ pod.node }}</td>
         <td>
+          {% if pod.name in killable_pods %}
           <button class="kill"
                   hx-post="/pods/{{ pod.name }}/kill"
                   hx-target="#pod-list"
@@ -28,6 +29,9 @@
                   hx-confirm="Kill pod {{ pod.name }}?">
             kill
           </button>
+          {% else %}
+          <span class="empty">protected</span>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
