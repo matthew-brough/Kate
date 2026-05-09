@@ -10,19 +10,9 @@ permissions:
   packages: write
 
 jobs:
-  trivy-cache:
-    name: trivy cache
-    runs-on: ubuntu-latest
-    steps:
-      - uses: aquasecurity/setup-trivy@e6c2c5e321ed9123bda567646e2f96565e34abe1 # v0.2.4
-        with:
-          version: v0.67.2
-          cache: true
-
   build:
     name: ${{ matrix.service }}
     runs-on: ubuntu-latest
-    needs: trivy-cache
     strategy:
       fail-fast: false
       matrix:
@@ -68,14 +58,19 @@ jobs:
           sbom: true
           provenance: mode=max
 
-      - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/kate-${{ matrix.service }}:${{ github.sha }}
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          version: v0.67.2
+      - name: Scan image with Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$HOME/.docker/config.json:/root/.docker/config.json:ro" \
+            aquasec/trivy:0.67.2 image \
+            --scanners vuln \
+            --pkg-types os,library \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --skip-version-check \
+            --exit-code 1 \
+            ghcr.io/${{ github.repository_owner }}/kate-${{ matrix.service }}:${{ github.sha }}
 
       - name: Sign image
         run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/kate-${{ matrix.service }}@${{ steps.build.outputs.digest }}
