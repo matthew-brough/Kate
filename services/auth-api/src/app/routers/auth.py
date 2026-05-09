@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_session
 from app.models import User
 from app.schemas import RegisterRequest, TokenResponse, UserRead, normalize_identity
-from app.security import create_access_token, hash_password, verify_password
+from app.security import create_access_token, hash_password_async, verify_password_async
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 log: structlog.stdlib.BoundLogger = structlog.get_logger()
@@ -41,7 +41,7 @@ async def register(
     user = User(
         username=body.username,
         email=str(body.email),
-        password_hash=hash_password(body.password),
+        password_hash=await hash_password_async(body.password),
     )
     session.add(user)
     try:
@@ -72,7 +72,7 @@ async def token(
         log.warning("login_rejected_locked", user_id=str(user.id), username=user.username)
         raise _invalid_credentials()
 
-    if not verify_password(form.password, user.password_hash):
+    if not await verify_password_async(form.password, user.password_hash):
         if user.locked_until is not None and _as_utc(user.locked_until) <= now:
             user.failed_login_attempts = 0
             user.locked_until = None
