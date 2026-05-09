@@ -1,7 +1,9 @@
 image:
   tag: ""  # Tilt overrides this with the local dev image tag.
 
+auth:
+  mode: dev
+
 env:
   CHAOS_NAMESPACE: "platform"
   CHAOS_SERVICES: "orders-api,auth-api,report-api,worker"
-# chaosToken sourced from CHAOS_TOKEN in .env via Tilt --set.

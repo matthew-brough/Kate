@@ -42,7 +42,6 @@ DB_PASSWORDS = {
     "report-api": _require(_ENV, "APP_REPORT_DB_PASSWORD"),
 }
 REDIS_PASSWORD = _require(_ENV, "APP_REDIS_PASSWORD")
-CHAOS_TOKEN = _require(_ENV, "CHAOS_TOKEN")
 LOADGEN_PASSWORD = _require(_ENV, "LOADGEN_PASSWORD")
 
 # Charts that need jwtSecret injected from .env (auth-api and gateway must agree
@@ -72,7 +71,9 @@ def svc(name, port_forward=None, live_sync=True):
     if name in DB_PASSWORDS:
         set_args.append("postgresql.auth.password=" + DB_PASSWORDS[name])
     if name == "chaos-portal":
-        set_args.append("chaosToken=" + CHAOS_TOKEN)
+        set_args.append("auth.mode=dev")
+        if _ENV.get("CHAOS_TOKEN"):
+            set_args.append("auth.token=" + _ENV["CHAOS_TOKEN"])
     k8s_yaml(
         helm(
             "charts/" + name,
