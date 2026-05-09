@@ -43,6 +43,7 @@ DB_PASSWORDS = {
 }
 REDIS_PASSWORD = _require(_ENV, "APP_REDIS_PASSWORD")
 CHAOS_TOKEN = _require(_ENV, "CHAOS_TOKEN")
+LOADGEN_PASSWORD = _require(_ENV, "LOADGEN_PASSWORD")
 
 # Charts that need jwtSecret injected from .env (auth-api and gateway must agree
 # on the value or token validation silently fails).
@@ -159,6 +160,7 @@ k8s_yaml(
         set       = [
             "image.repository=" + REGISTRY + "/loadgen",
             "image.tag=latest",
+            "env.LOADGEN_PASSWORD=" + LOADGEN_PASSWORD,
         ],
     )
 )

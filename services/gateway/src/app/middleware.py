@@ -13,13 +13,6 @@ from app.settings import settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger()
 
-# (max_requests, window_seconds) per path
-_RATE_LIMITS: dict[str, tuple[int, int]] = {
-    "/api/auth/token": (10, 60),
-    "/api/auth/register": (5, 60),
-}
-
-
 class RateLimitRedis(Protocol):
     async def incr(self, name: str) -> int: ...
 
@@ -31,7 +24,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)  # type: ignore[arg-type]
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        rule = _RATE_LIMITS.get(request.url.path)
+        rule = _rate_limits().get(request.url.path)
         if rule is not None:
             limit, window = rule
             client_ip = _client_identity(request)
@@ -44,6 +37,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 logger.warning("rate_limit_exceeded", path=request.url.path, client=client_ip)
                 return JSONResponse({"detail": "Too many requests"}, status_code=429)
         return await call_next(request)
+
+
+def _rate_limits() -> dict[str, tuple[int, int]]:
+    # (max_requests, window_seconds) per path. Kept behind settings so dev/load
+    # environments can raise auth ceilings without changing production defaults.
+    return {
+        "/api/auth/token": (
+            settings.rate_limit_auth_token_requests,
+            settings.rate_limit_auth_token_window_seconds,
+        ),
+        "/api/auth/register": (
+            settings.rate_limit_auth_register_requests,
+            settings.rate_limit_auth_register_window_seconds,
+        ),
+    }
 
 
 def _client_identity(request: Request) -> str:

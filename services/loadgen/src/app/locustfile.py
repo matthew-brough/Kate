@@ -4,8 +4,10 @@ Simulates the browse → buy → report flow continuously.
 Locust env vars control behaviour: LOCUST_HOST, LOCUST_USERS, LOCUST_SPAWN_RATE.
 """
 
+import os
 import random
 import string
+import time
 import uuid
 
 from faker import Faker
@@ -16,7 +18,7 @@ fake = Faker()
 
 PRODUCTS = [str(uuid.uuid4()) for _ in range(20)]
 REQUEST_TIMEOUT = 5
-AUTH_ATTEMPTS = 3
+AUTH_RETRY_BACKOFF_SECONDS = 60
 ORDER_LIST_LABEL = "purchase list [GET]"
 ORDER_CREATE_LABEL = "purchase create [POST]"
 REPORT_CREATE_LABEL = "analytics create [POST]"
@@ -31,17 +33,28 @@ class PlatformUser(HttpUser):
     _token: str
     _username: str
     _password: str
+    _client_ip: str
+    _registered: bool
+    _next_auth_attempt_at: float
 
     def on_start(self) -> None:
         suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
         self._username = f"load_{suffix}"
-        self._password = "L0adG3n!pw"
+        self._password = os.environ["LOADGEN_PASSWORD"]
         self._token = ""
+        self._client_ip = fake.ipv4_private()
+        self._registered = False
+        self._next_auth_attempt_at = 0
         self._ensure_token()
+
+    def _headers(self) -> dict[str, str]:
+        # The gateway is configured to trust X-Forwarded-For in dev, matching ingress traffic.
+        return {"X-Forwarded-For": self._client_ip}
 
     def _register(self) -> Response:
         return self.client.post(
             "/api/auth/register",
+            headers=self._headers(),
             json={
                 "username": self._username,
                 "email": f"{self._username}@loadgen.internal",
@@ -54,6 +67,7 @@ class PlatformUser(HttpUser):
     def _login(self) -> Response:
         return self.client.post(
             "/api/auth/token",
+            headers=self._headers(),
             data={"username": self._username, "password": self._password},
             name="/api/auth/token",
             timeout=REQUEST_TIMEOUT,
@@ -62,17 +76,29 @@ class PlatformUser(HttpUser):
     def _ensure_token(self) -> bool:
         if self._token:
             return True
+        if time.monotonic() < self._next_auth_attempt_at:
+            return False
 
-        for _ in range(AUTH_ATTEMPTS):
-            self._register()
-            r = self._login()
-            if r.status_code == 200:
-                self._token = r.json().get("access_token", "")
-                return bool(self._token)
+        if not self._registered:
+            register = self._register()
+            if register.status_code in (201, 409):
+                self._registered = True
+            else:
+                self._next_auth_attempt_at = time.monotonic() + AUTH_RETRY_BACKOFF_SECONDS
+                return False
+
+        r = self._login()
+        if r.status_code == 200:
+            self._token = r.json().get("access_token", "")
+            return bool(self._token)
+        self._next_auth_attempt_at = time.monotonic() + AUTH_RETRY_BACKOFF_SECONDS
         return False
 
     def _auth(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self._token}"}
+        return {
+            "Authorization": f"Bearer {self._token}",
+            **self._headers(),
+        }
 
     @task(3)
     def browse_orders(self) -> None:

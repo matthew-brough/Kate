@@ -51,6 +51,10 @@ class Settings(BaseSettings):
 
     rate_limit_redis_url: str = "redis://localhost:6379/0"
     rate_limit_trust_x_forwarded_for: bool = False
+    rate_limit_auth_token_requests: int = 10
+    rate_limit_auth_token_window_seconds: int = 60
+    rate_limit_auth_register_requests: int = 5
+    rate_limit_auth_register_window_seconds: int = 60
     redis_password: str | None = None
 
     @property
