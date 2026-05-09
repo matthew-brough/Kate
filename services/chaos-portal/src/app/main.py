@@ -1,5 +1,7 @@
 import hmac
 import os
+from base64 import b64decode
+from binascii import Error as BinasciiError
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -28,13 +30,19 @@ log = structlog.get_logger()
 
 NAMESPACE = os.getenv("CHAOS_NAMESPACE", "platform")
 SERVICES = os.getenv("CHAOS_SERVICES", "orders-api,auth-api,report-api,worker").split(",")
+CHAOS_AUTH_MODE = os.getenv("CHAOS_AUTH_MODE", "token")
 CHAOS_TOKEN = os.getenv("CHAOS_TOKEN", "")
+AUTH_REALM = "chaos-portal"
 
 
 @asynccontextmanager
 async def lifespan(app: Starlette) -> AsyncIterator[None]:
-    if not CHAOS_TOKEN:
+    if CHAOS_AUTH_MODE not in {"dev", "token"}:
+        raise RuntimeError("CHAOS_AUTH_MODE must be 'dev' or 'token'.")
+    if CHAOS_AUTH_MODE == "token" and not CHAOS_TOKEN:
         raise RuntimeError("CHAOS_TOKEN env var is not set. Refusing to start unprotected.")
+    if CHAOS_AUTH_MODE == "dev":
+        log.warning("chaos_portal_auth_disabled", mode=CHAOS_AUTH_MODE)
     yield
 
 
@@ -44,20 +52,54 @@ _OPEN_PATHS = {"/health", "/ready"}
 
 
 class TokenAuthMiddleware:
-    """Require X-Chaos-Token header on all non-health paths when CHAOS_TOKEN is set."""
+    """Gate chaos actions unless the portal is running in explicit dev auth mode."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and scope["path"] not in _OPEN_PATHS:
+        if (
+            scope["type"] == "http"
+            and scope["path"] not in _OPEN_PATHS
+            and CHAOS_AUTH_MODE != "dev"
+        ):
             request = Request(scope)
-            incoming = request.headers.get("X-Chaos-Token", "")
-            if not hmac.compare_digest(incoming, CHAOS_TOKEN):
-                response = Response("Unauthorized", status_code=401)
+            if not _is_authorized(request):
+                response = Response(
+                    "Unauthorized",
+                    status_code=401,
+                    headers={"WWW-Authenticate": f'Basic realm="{AUTH_REALM}"'},
+                )
                 await response(scope, receive, send)
                 return
         await self.app(scope, receive, send)
+
+
+def _is_authorized(request: Request) -> bool:
+    incoming = request.headers.get("X-Chaos-Token", "")
+    if _token_matches(incoming):
+        return True
+
+    auth_header = request.headers.get("Authorization", "")
+    scheme, _, credentials = auth_header.partition(" ")
+    if scheme.lower() == "bearer":
+        return _token_matches(credentials)
+    if scheme.lower() == "basic":
+        return _basic_password_matches(credentials)
+    return False
+
+
+def _token_matches(value: str) -> bool:
+    return bool(CHAOS_TOKEN) and bool(value) and hmac.compare_digest(value, CHAOS_TOKEN)
+
+
+def _basic_password_matches(credentials: str) -> bool:
+    try:
+        decoded = b64decode(credentials, validate=True).decode()
+    except (BinasciiError, UnicodeDecodeError, ValueError):
+        return False
+    _, separator, password = decoded.partition(":")
+    return bool(separator) and _token_matches(password)
 
 
 async def index(request: Request) -> Response:

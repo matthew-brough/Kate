@@ -1,8 +1,10 @@
+from base64 import b64encode
 from unittest.mock import MagicMock, patch
 
 from starlette.testclient import TestClient
 
 from app.k8s import PartitionInfo, PodInfo
+from app.main import CHAOS_TOKEN
 
 
 @patch("app.main.k8s")
@@ -108,6 +110,38 @@ def test_unauth_request_rejected(unauth_client: TestClient) -> None:
 def test_wrong_token_rejected(unauth_client: TestClient) -> None:
     unauth_client.headers["X-Chaos-Token"] = "not-the-right-token"
     assert unauth_client.get("/").status_code == 401
+
+
+def test_malformed_basic_auth_rejected(unauth_client: TestClient) -> None:
+    unauth_client.headers["Authorization"] = "Basic not-base64"
+    assert unauth_client.get("/").status_code == 401
+
+
+@patch("app.main.k8s")
+def test_basic_auth_allows_browser_access(mock_k8s: MagicMock, unauth_client: TestClient) -> None:
+    mock_k8s.list_pods.return_value = []
+    mock_k8s.list_partitions.return_value = []
+    credentials = b64encode(f"chaos:{CHAOS_TOKEN}".encode()).decode()
+    unauth_client.headers["Authorization"] = f"Basic {credentials}"
+    assert unauth_client.get("/").status_code == 200
+
+
+@patch("app.main.k8s")
+def test_bearer_auth_allowed(mock_k8s: MagicMock, unauth_client: TestClient) -> None:
+    mock_k8s.list_pods.return_value = []
+    mock_k8s.list_partitions.return_value = []
+    unauth_client.headers["Authorization"] = f"Bearer {CHAOS_TOKEN}"
+    assert unauth_client.get("/").status_code == 200
+
+
+@patch("app.main.k8s")
+def test_dev_auth_mode_allows_browser_access(
+    mock_k8s: MagicMock, unauth_client: TestClient, monkeypatch
+) -> None:
+    mock_k8s.list_pods.return_value = []
+    mock_k8s.list_partitions.return_value = []
+    monkeypatch.setattr("app.main.CHAOS_AUTH_MODE", "dev")
+    assert unauth_client.get("/").status_code == 200
 
 
 def test_health_endpoints_open(unauth_client: TestClient) -> None:
