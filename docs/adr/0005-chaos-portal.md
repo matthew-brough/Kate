@@ -59,6 +59,18 @@ RBAC verbs granted:
 `create` and `delete` on NetworkPolicies are intentionally excluded — the patch approach never
 creates or deletes policies, only modifies them in place.
 
+### Access pattern
+
+The portal supports two explicit auth modes:
+
+- `token` mode is the default chart behavior.  It requires a shared token and accepts it via
+  `X-Chaos-Token`, `Authorization: Bearer`, or browser Basic auth.  Basic auth exists because a
+  direct browser navigation cannot attach the custom header that the original implementation
+  required.
+- `dev` mode bypasses portal auth and is used by Tilt/local dev values.  The portal is still only
+  reachable through the local dev exposure path (normally the Tilt port-forward), while Kubernetes
+  RBAC and the server-side service allowlist continue to constrain what the portal can mutate.
+
 ### No OTel / no Prometheus metrics
 
 The portal is a dev tool used sporadically; high-cardinality traces and counters add noise to the
