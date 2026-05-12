@@ -1,11 +1,12 @@
-# ADR-0004: Observability stack — metrics, logs, and traces
+# Design Decision 0004: Observability Stack
 
 **Date:** 2026-04-24  
-**Status:** Accepted
+**Status:** Current  
+**Scope:** Metrics, logs, traces, and Grafana dashboards
 
 ## Context
 
-Phase 6 adds full-stack observability to the Kate platform. Every service already instruments:
+The platform includes full-stack observability. Every service already instruments:
 
 - **Metrics** — `prometheus-fastapi-instrumentator` exposes `/metrics` (HTTP request rate, error rate, latency histograms)
 - **Structured logs** — `structlog` emits JSON with `trace_id` / `span_id` fields

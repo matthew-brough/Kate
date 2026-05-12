@@ -1,7 +1,8 @@
-# ADR-0002: Queue-Depth Autoscaling for the Celery Worker
+# Design Decision 0002: Queue-Depth Autoscaling for the Celery Worker
 
-**Status**: Accepted  
-**Date**: 2026-04-16
+**Status**: Current  
+**Date**: 2026-04-16  
+**Scope**: Worker autoscaling
 
 ---
 
@@ -26,9 +27,9 @@ kube-prometheus-stack. Write a `custom.metrics.k8s.io` rule that exposes
 `redis_list_length{listName="celery"}` as a k8s custom metric. The HPA then targets this
 metric via `type: Pods` or `type: External`.
 
-**Pros**: standard Kubernetes HPA API, same recruiter signal as built-in metrics.  
-**Cons**: requires Prometheus + redis_exporter already running (Phase 6 dependency). Forces
-Phase 4 to wait on Phase 6, or introduces forward-porting complexity.
+**Pros**: standard Kubernetes HPA API, same operational shape as built-in metrics.  
+**Cons**: requires Prometheus + redis_exporter already running. Forces worker autoscaling
+to depend on the observability stack, or introduces forward-porting complexity.
 
 ### Option 3 — KEDA (Kubernetes Event-Driven Autoscaler)
 
@@ -36,7 +37,7 @@ Phase 4 to wait on Phase 6, or introduces forward-porting complexity.
 trigger source directly — for Redis, it reads the queue list length in-process. Internally
 KEDA creates a standard `HPA` object; the k8s control plane still does the actual scaling.
 
-**Pros**: zero Prometheus dependency; operational in Phase 4; native Redis scaler;
+**Pros**: zero Prometheus dependency; native Redis scaler;
 supports scale-to-zero and per-trigger cooldowns; broadly adopted in production.  
 **Cons**: additional controller to install; `ScaledObject` is not a first-party k8s resource.
 
@@ -47,16 +48,16 @@ supports scale-to-zero and per-trigger cooldowns; broadly adopted in production.
 **KEDA** (Option 3).
 
 The primary reason is operational ordering: KEDA works with only Redis running, which is
-already a Phase 2 dependency. Prometheus-adapter would block Phase 4 on Phase 6 and introduce
-a circular dependency between observable infrastructure and the services being observed.
+already required by report generation. Prometheus-adapter would create a circular dependency
+between observable infrastructure and the services being observed.
 
 KEDA's `ScaledObject` is more expressive than a CPU HPA for this use case:
 - `listLength: 5` means "add one replica per 5 queued tasks"
 - `cooldownPeriod: 30` prevents flapping after a burst drains
 - `minReplicaCount: 1` avoids cold-start latency under steady loadgen traffic
 
-When Prometheus is available (Phase 6), the dashboard can read the same Redis metric via a
-recording rule — KEDA and Grafana use independent metric paths, so they do not conflict.
+When Prometheus is available, the dashboard can read the same Redis metric via a recording
+rule. KEDA and Grafana use independent metric paths, so they do not conflict.
 
 ### Why not CPU HPA at all?
 
@@ -90,5 +91,5 @@ The `ScaledObject` targets the `worker` Deployment. When queue depth is 0 the HP
 
 - `make keda-up` must run before enabling `keda.enabled: true` in chart values.
 - The standard `hpa.enabled` flag on the worker chart remains `false`; KEDA owns the HPA.
-- Phase 6 ADR-0006 documents the Grafana panel that visualises queue depth vs. replica count
-  as a time-series overlay — the "headline screenshot" for this decision.
+- [Design decision 0004](0004-observability-stack.md) documents the Grafana panel that
+  visualises queue depth vs. replica count as a time-series overlay.

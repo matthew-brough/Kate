@@ -1,13 +1,14 @@
-# ADR-0005 — Chaos Portal Design
+# Design Decision 0005: Chaos Portal
 
 **Date:** 2026-04-27  
-**Status:** Accepted
+**Status:** Current  
+**Scope:** Controlled failure UI and Kubernetes mutation model
 
 ## Context
 
-Phase 7 adds a chaos engineering facility: a web portal that lets developers trigger controlled
-failures against the platform namespace to verify observability (Phase 6) and resilience
-(Phase 4 HPA/PDB).  Two failure modes are required:
+The platform includes a chaos engineering facility: a web portal that lets developers trigger
+controlled failures against the platform namespace to verify observability and resilience.
+Two failure modes are required:
 
 1. **Pod kill** — delete a named pod; the deployment controller restarts it; latency spikes and
    error rates in the Grafana dashboards should show the event.
@@ -91,5 +92,5 @@ set in the image to prevent `.pyc` creation.  A `/tmp` emptyDir volume is mounte
 - NetworkPolicy partitioning only works when `networkPolicy.enabled: true` in the target
   service's dev-values — if the allow-ingress policy does not exist, `toggle_partition` raises
   `ValueError` with a clear error message.
-- `CHAOS_SERVICES` env var configures the service list; defaults cover all Phase 2 services
+- `CHAOS_SERVICES` env var configures the service list; defaults cover the core backend services
   (`orders-api,auth-api,report-api,worker`).

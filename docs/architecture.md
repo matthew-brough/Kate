@@ -51,7 +51,7 @@ Browser / loadgen
 
 ## Networking
 
-Each service has three NetworkPolicies (Phase 4):
+Each service has three NetworkPolicies when `networkPolicy.enabled` is true:
 
 | Policy | Effect |
 |--------|--------|
@@ -123,7 +123,7 @@ Kate/
 │   ├── loadgen/            Locust headless, ~5 VUs
 │   └── chaos-portal/       Starlette + HTMX chaos engineering portal
 ├── charts/
-│   ├── _template/          reference chart (all Phase 4 templates feature-flagged)
+│   ├── _template/          reference chart with resilience templates feature-flagged
 │   └── {service}/          one chart per service; postgresql sub-chart where needed
 ├── gitops/
 │   ├── root-{dev,staging}.yaml
@@ -134,7 +134,7 @@ Kate/
 │   ├── argocd/             ArgoCD install + root app-of-apps
 │   └── observability/      kube-prometheus-stack, Loki, Promtail, Tempo, OTel
 ├── dashboards/             Jsonnet source for Grafana dashboards
-├── docs/adr/               0001–0006 architecture decision records
+├── docs/design-decisions/  0001-0006 structured design decision notes
 ├── Makefile
 └── Tiltfile
 ```

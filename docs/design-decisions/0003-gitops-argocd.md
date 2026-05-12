@@ -1,11 +1,14 @@
-# ADR-0003: GitOps with ArgoCD app-of-apps
+# Design Decision 0003: GitOps with ArgoCD App-of-Apps
 
 **Date:** 2026-04-20  
-**Status:** Accepted
+**Status:** Current  
+**Scope:** GitOps topology and local Tilt coexistence
 
 ## Context
 
-Phase 5 introduces a GitOps promotion flow. Services need to be deployed to a `dev` environment (auto-sync on every merge) and a `staging` environment (manual promotion gates). The tooling must:
+The platform has a GitOps promotion flow. Services need to be deployed to a `dev`
+environment (auto-sync on every merge) and a `staging` environment (manual promotion
+gates). The tooling must:
 
 - Reconcile cluster state from Git without imperative `helm upgrade` calls
 - Provide a UI for visibility into sync status and diff
@@ -33,8 +36,9 @@ Each directory contains one `Application` manifest per service. Each child Appli
 
 ## Image tag promotion flow
 
-1. CI builds and pushes `registry.localhost:5001/<svc>:<git-sha>`.
-2. CI opens a PR updating `image.tag` in `charts/<svc>/ci/staging-values.yaml`.
+1. CI builds and pushes `ghcr.io/<owner>/kate-<svc>:<git-sha>`.
+2. Promotion is a source change to the service chart's environment values, normally
+   `image.repository` and `image.tag` for the target environment.
 3. Merge → ArgoCD detects OutOfSync on the `<svc>-staging` Application → operator clicks Sync (or `argocd app sync`).
 
 Dev promotes automatically on every merge (no PR gate).
@@ -45,10 +49,6 @@ Tilt is the inner dev loop: it builds images locally from source and live-syncs 
 
 - Tilt targets the local registry (`registry.localhost:5001`) and the `platform` namespace directly via `kubectl apply`.
 - ArgoCD's `selfHeal` would revert Tilt changes — **do not run both simultaneously against the same namespace.** Use Tilt (`make dev`) for active development and ArgoCD for environment reconciliation.
-
-## Bitnami sub-charts
-
-`report-api` and `redis` depend on Bitnami sub-charts. The bootstrap script registers `https://charts.bitnami.com/bitnami` as a Helm repository in ArgoCD so it can resolve dependencies at sync time. Run `make helm-deps` locally before pushing to generate `Chart.lock`.
 
 ## Consequences
 
