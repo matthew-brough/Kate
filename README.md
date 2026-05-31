@@ -54,7 +54,7 @@ Optional add-ons (run once after `cluster-up`):
 
 ```bash
 make keda-up    # KEDA for worker queue-depth autoscaling
-make argocd-up  # ArgoCD GitOps — app-of-apps for dev + staging
+make argocd-up  # ArgoCD GitOps — app-of-apps for dev + staging; do not run with Tilt in the same namespace
 ```
 
 ## Stack
@@ -99,7 +99,7 @@ make argocd-up    install ArgoCD + apply app-of-apps
 make keda-up      install KEDA
 make dashboards   recompile Jsonnet dashboards → Grafana ConfigMaps
 make helm-lint    helm lint all charts
-make cold-start   cluster + add-ons, then tilt up
+make cold-start   cluster + KEDA + observability, then tilt up
 ```
 
 ## Design decisions

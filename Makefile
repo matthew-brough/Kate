@@ -29,7 +29,7 @@ argocd-up: ## Install ArgoCD and apply root app-of-apps (run once after cluster-
 obs-up: ## Install kube-prometheus-stack, Loki, Promtail, Tempo, OTel Collector
 	@bash infra/observability/bootstrap.sh
 
-cold-start: cluster-up keda-up argocd-up obs-up ## Full cold-start: cluster + KEDA + ArgoCD + observability, then `tilt up`
+cold-start: cluster-up keda-up obs-up ## Full cold-start: cluster + KEDA + observability, then `tilt up`
 	tilt up
 
 # ── Dev loop ─────────────────────────────────────────────────────────────────
