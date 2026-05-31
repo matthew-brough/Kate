@@ -1,5 +1,5 @@
 image:
-  tag: ""  # Tilt overrides this with the local dev image tag.
+  tag: latest
 
 pdb:
   enabled: true
