@@ -44,9 +44,7 @@ def pg_database_url() -> Generator[str]:
     from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
     with PostgresContainer("postgres:16-alpine") as pg:
-        yield pg.get_connection_url().replace(
-            "postgresql+psycopg2://", "postgresql+asyncpg://"
-        )
+        yield pg.get_connection_url().replace("postgresql+psycopg2://", "postgresql+asyncpg://")
 
 
 @pytest.fixture

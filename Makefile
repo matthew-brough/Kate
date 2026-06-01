@@ -68,7 +68,13 @@ lint: ## ruff check + pyright for every service
 
 fmt: ## ruff format every service
 	@for svc in $(REAL_SERVICES); do \
-	  (cd services/$$svc && uv run ruff format src/ tests/); \
+	  echo "==> Formatting $$svc"; \
+	  (cd services/$$svc && \
+	    paths="src"; \
+	    [ -d tests ] && paths="$$paths tests"; \
+	    [ -d alembic ] && paths="$$paths alembic"; \
+	    uv run ruff check --config pyproject.toml --select I --fix $$paths && \
+	    uv run ruff format --config pyproject.toml $$paths); \
 	done
 
 # ── Images ───────────────────────────────────────────────────────────────────

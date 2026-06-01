@@ -13,6 +13,7 @@ from app.settings import settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger()
 
+
 class RateLimitRedis(Protocol):
     async def incr(self, name: str) -> int: ...
 

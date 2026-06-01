@@ -44,9 +44,7 @@ async def _proxy(
 ) -> Response:
     client = _get_client(request)
 
-    headers = {
-        k: v for k, v in request.headers.items() if k.lower() not in _STRIP_REQUEST_HEADERS
-    }
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in _STRIP_REQUEST_HEADERS}
     if user is not None:
         headers["X-User-Id"] = user.sub
         headers["X-Username"] = user.username
@@ -69,9 +67,7 @@ async def _proxy(
         content=upstream.content,
         status_code=upstream.status_code,
         headers={
-            k: v
-            for k, v in upstream.headers.items()
-            if k.lower() not in _STRIP_RESPONSE_HEADERS
+            k: v for k, v in upstream.headers.items() if k.lower() not in _STRIP_RESPONSE_HEADERS
         },
     )
 

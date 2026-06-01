@@ -8,9 +8,7 @@ from app.k8s import LoadgenStatus, PartitionInfo, PodInfo
 from app.main import CHAOS_TOKEN
 
 
-def loadgen_status(
-    replicas: int = 1, users: str = "5", spawn_rate: str = "1"
-) -> LoadgenStatus:
+def loadgen_status(replicas: int = 1, users: str = "5", spawn_rate: str = "1") -> LoadgenStatus:
     return LoadgenStatus(
         deployment_name="loadgen",
         replicas=replicas,
@@ -156,9 +154,7 @@ def test_apply_loadgen_profile(mock_k8s: MagicMock, client: TestClient) -> None:
 
 
 @patch("app.main.k8s")
-def test_apply_loadgen_profile_rejects_unknown(
-    mock_k8s: MagicMock, client: TestClient
-) -> None:
+def test_apply_loadgen_profile_rejects_unknown(mock_k8s: MagicMock, client: TestClient) -> None:
     resp = client.post("/loadgen/unbounded/apply")
     assert resp.status_code == 400
     assert "not configured" in resp.text

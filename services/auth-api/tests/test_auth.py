@@ -73,9 +73,7 @@ async def test_register_short_password_returns_422(client: AsyncClient) -> None:
         "prefixcarol123!Pass",
     ],
 )
-async def test_register_password_policy_returns_422(
-    client: AsyncClient, password: str
-) -> None:
+async def test_register_password_policy_returns_422(client: AsyncClient, password: str) -> None:
     r = await client.post(
         "/auth/register",
         json={"username": "carol", "email": "carol@example.com", "password": password},
@@ -110,9 +108,7 @@ async def test_token_wrong_password_returns_401(client: AsyncClient) -> None:
     assert r.status_code == 401
 
 
-async def test_failed_logins_lock_account(
-    client: AsyncClient, test_engine: AsyncEngine
-) -> None:
+async def test_failed_logins_lock_account(client: AsyncClient, test_engine: AsyncEngine) -> None:
     await client.post(
         "/auth/register",
         json={"username": "frank", "email": "frank@example.com", "password": VALID_PASSWORD},

@@ -127,7 +127,7 @@ def _token_matches(value: str) -> bool:
 def _basic_password_matches(credentials: str) -> bool:
     try:
         decoded = b64decode(credentials, validate=True).decode()
-    except (BinasciiError, UnicodeDecodeError, ValueError):
+    except BinasciiError, UnicodeDecodeError, ValueError:
         return False
     _, separator, password = decoded.partition(":")
     return bool(separator) and _token_matches(password)
@@ -190,9 +190,7 @@ async def index(request: Request) -> Response:
 
 async def pod_list(request: Request) -> Response:
     pods = k8s.list_pods(NAMESPACE)
-    return _templates.TemplateResponse(
-        request, "_pod_list.html", _pod_list_context(pods)
-    )
+    return _templates.TemplateResponse(request, "_pod_list.html", _pod_list_context(pods))
 
 
 async def kill_pod(request: Request) -> Response:
@@ -207,9 +205,7 @@ async def kill_pod(request: Request) -> Response:
     k8s.delete_pod(NAMESPACE, name)
     log.info("pod_killed", pod=name, namespace=NAMESPACE)
     pods = k8s.list_pods(NAMESPACE)
-    return _templates.TemplateResponse(
-        request, "_pod_list.html", _pod_list_context(pods)
-    )
+    return _templates.TemplateResponse(request, "_pod_list.html", _pod_list_context(pods))
 
 
 async def partition_list(request: Request) -> Response:
