@@ -12,8 +12,20 @@ LOKI_TENANT_ID="kate"
 : "${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD before installing observability.}"
 : "${LOKI_TENANT_PASSWORD:?Set LOKI_TENANT_PASSWORD before installing observability.}"
 
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 VALUES="${REPO_ROOT}/infra/observability/values"
+
+ensure_helm_repo() {
+  local repo_name="$1"
+  local repo_url="$2"
+
+  if helm repo list -o yaml | grep -q "name: ${repo_name}"; then
+    return
+  fi
+
+  helm repo add "${repo_name}" "${repo_url}"
+}
 
 kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
 
@@ -31,10 +43,9 @@ kubectl -n observability create secret generic loki-gateway-basic-auth \
   --from-literal=.htpasswd="${LOKI_TENANT_ID}:${LOKI_HTPASSWD_HASH}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm repo update
+ensure_helm_repo prometheus-community https://prometheus-community.github.io/helm-charts
+ensure_helm_repo grafana https://grafana.github.io/helm-charts
+ensure_helm_repo open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace observability \

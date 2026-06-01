@@ -18,10 +18,8 @@ ports:
 
 # Local registry — images pushed here are available inside the cluster
 registries:
-  create:
-    name: registry.localhost
-    host: "0.0.0.0"
-    hostPort: "5001"
+  use:
+    - registry.localhost:5000
   config: |
     mirrors:
       "registry.localhost:5001":
@@ -39,3 +37,24 @@ options:
   kubeconfig:
     updateDefaultKubeconfig: true
     switchCurrentContext: true
+  runtime:
+    labels:
+      - label: com.docker.compose.project=kate
+        nodeFilters:
+          - server:*
+          - agent:*
+          - loadbalancer
+      - label: com.docker.compose.oneoff=False
+        nodeFilters:
+          - server:*
+          - agent:*
+          - loadbalancer
+      - label: com.docker.compose.service=k3d-server
+        nodeFilters:
+          - server:*
+      - label: com.docker.compose.service=k3d-agent
+        nodeFilters:
+          - agent:*
+      - label: com.docker.compose.service=k3d-loadbalancer
+        nodeFilters:
+          - loadbalancer

@@ -2,19 +2,34 @@
 set -euo pipefail
 
 ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-7.7.0}"
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-echo "==> Adding argo helm repo"
-helm repo add argo https://argoproj.github.io/argo-helm
-helm repo update
+ensure_helm_repo() {
+  local repo_name="$1"
+  local repo_url="$2"
 
-echo "==> Installing ArgoCD ${ARGOCD_CHART_VERSION} in namespace argocd"
-echo "==> Dev-only: configuring argocd-server with configs.params.server.insecure=true"
-helm upgrade --install argocd argo/argo-cd \
-  --namespace argocd --create-namespace \
-  --version "${ARGOCD_CHART_VERSION}" \
-  --set "configs.params.server\.insecure=true" \
-  --wait
+  if helm repo list -o yaml | grep -q "name: ${repo_name}"; then
+    return
+  fi
+
+  helm repo add "${repo_name}" "${repo_url}"
+}
+
+if helm status argocd --namespace argocd >/dev/null 2>&1; then
+  echo "==> ArgoCD already installed — skipping Helm install."
+else
+  echo "==> Ensuring argo Helm repo"
+  ensure_helm_repo argo https://argoproj.github.io/argo-helm
+
+  echo "==> Installing ArgoCD ${ARGOCD_CHART_VERSION} in namespace argocd"
+  echo "==> Dev-only: configuring argocd-server with configs.params.server.insecure=true"
+  helm upgrade --install argocd argo/argo-cd \
+    --namespace argocd --create-namespace \
+    --version "${ARGOCD_CHART_VERSION}" \
+    --set "configs.params.server\.insecure=true" \
+    --wait
+fi
 
 echo "==> Applying root Applications"
 kubectl apply -f "${REPO_ROOT}/gitops/root-dev.yaml"

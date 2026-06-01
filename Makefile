@@ -18,7 +18,9 @@ cluster-up: ## Create k3d cluster and bootstrap ingress + namespaces
 	@bash infra/bootstrap.sh
 
 cluster-down: ## Destroy the k3d cluster (destructive)
-	k3d cluster delete $(CLUSTER)
+	@docker rm -f registry.localhost k3d-$(CLUSTER)-tools >/dev/null 2>&1 || true
+	@k3d cluster delete $(CLUSTER) || true
+	@docker network rm k3d-$(CLUSTER) >/dev/null 2>&1 || true
 
 keda-up: ## Install KEDA (queue-depth HPA for worker; run once after cluster-up)
 	@bash infra/keda/bootstrap.sh
@@ -27,7 +29,7 @@ argocd-up: ## Install ArgoCD and apply root app-of-apps (run once after cluster-
 	@bash infra/argocd/bootstrap.sh
 
 obs-up: ## Install kube-prometheus-stack, Loki, Promtail, Tempo, OTel Collector
-	@bash infra/observability/bootstrap.sh
+	@bash -c 'set -a; [ ! -f .env ] || . ./.env; set +a; bash infra/observability/bootstrap.sh'
 
 cold-start: cluster-up keda-up obs-up ## Full cold-start: cluster + KEDA + observability, then `tilt up`
 	tilt up
